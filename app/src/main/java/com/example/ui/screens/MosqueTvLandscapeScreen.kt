@@ -224,20 +224,37 @@ fun MosqueTvLandscapeScreen(
 
             Spacer(modifier = Modifier.width(6.dp))
 
-            // Cast settings button
-            IconButton(
-              onClick = onOpenCastGuide,
+            // Screencast Button with PRO indicator
+            Box(
               modifier = Modifier
-                .size(34.dp)
-                .background(Color.Black.copy(alpha = 0.6f), CircleShape)
-                .testTag("tv_cast_button")
+                .background(
+                  color = if (uiState.isProSubscribed) Emerald800 else Gold500,
+                  shape = RoundedCornerShape(16.dp)
+                )
+                .border(
+                  width = 1.dp,
+                  color = if (uiState.isProSubscribed) Emerald500 else Gold400,
+                  shape = RoundedCornerShape(16.dp)
+                )
+                .clickable { onOpenCastGuide() }
+                .padding(horizontal = 10.dp, vertical = 5.dp)
+                .testTag("tv_screencast_button")
             ) {
-              Icon(
-                imageVector = Icons.Default.Cast,
-                contentDescription = "Cast ke TV",
-                tint = Gold400,
-                modifier = Modifier.size(18.dp)
-              )
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                  imageVector = Icons.Default.Cast,
+                  contentDescription = "Screencast TV",
+                  tint = if (uiState.isProSubscribed) IvoryWhite else Color.Black,
+                  modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(5.dp))
+                Text(
+                  text = if (uiState.isProSubscribed) "Cast Aktif" else "Screencast (Rp 10rb)",
+                  fontSize = 11.sp,
+                  fontWeight = FontWeight.ExtraBold,
+                  color = if (uiState.isProSubscribed) IvoryWhite else Color.Black
+                )
+              }
             }
           }
         }

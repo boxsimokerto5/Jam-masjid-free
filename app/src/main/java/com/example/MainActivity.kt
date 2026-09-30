@@ -28,6 +28,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.data.model.MosqueDisplayState
 import com.example.ui.dialogs.CastGuideDialog
+import com.example.ui.dialogs.MosqueSubscriptionDialog
 import com.example.ui.screens.MosqueMobilePortraitScreen
 import com.example.ui.screens.MosqueTvLandscapeScreen
 import com.example.ui.theme.MosqueClockTheme
@@ -99,7 +100,7 @@ class MainActivity : ComponentActivity() {
                   }
                 },
                 onOpenCastGuide = {
-                  viewModel.setCastGuideDialogVisible(true)
+                  viewModel.onScreencastClicked()
                 },
                 onDismissSpecialState = {
                   viewModel.dismissSpecialState()
@@ -120,7 +121,7 @@ class MainActivity : ComponentActivity() {
                   viewModel.toggleForcedTvMode()
                 },
                 onOpenCastGuide = {
-                  viewModel.setCastGuideDialogVisible(true)
+                  viewModel.onScreencastClicked()
                 },
                 onUpdateSettings = { newSettings ->
                   viewModel.updateSettings(newSettings)
@@ -161,6 +162,25 @@ class MainActivity : ComponentActivity() {
                 modifier = Modifier.fillMaxSize()
               )
             }
+          }
+
+          // Google Play In-App Subscription Dialog (Rp 10.000 / month)
+          if (uiState.showSubscriptionDialog) {
+            MosqueSubscriptionDialog(
+              isSubscribed = uiState.isProSubscribed,
+              onDismiss = {
+                viewModel.setSubscriptionDialogVisible(false)
+              },
+              onSubscribeClicked = { activity ->
+                viewModel.launchPlayStoreSubscription(activity)
+              },
+              onSimulateUnlock = {
+                viewModel.simulateToggleProSubscription()
+              },
+              onRestorePurchases = {
+                viewModel.restorePurchases()
+              }
+            )
           }
 
           // Miracast / Cast Guide Dialog

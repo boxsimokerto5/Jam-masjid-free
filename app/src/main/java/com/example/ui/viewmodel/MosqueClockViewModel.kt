@@ -23,6 +23,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Locale
+import com.example.data.billing.MosqueBillingManager
 import com.example.server.MosqueLocalPwaServer
 
 data class MosqueUiState(
@@ -39,8 +40,10 @@ data class MosqueUiState(
   val iqomahSecondsLeft: Int = 0,
   val sholatMinutesLeft: Int = 0,
   val activeInfoSlideIndex: Int = 0, // 0: Kas, 1: Petugas Jumat, 2: Hadits
-  val isForcedTvMode: Boolean = false,
+  val isForcedTvMode: Boolean = true, // Default to true: directly opens default mosque clock display!
   val showCastGuideDialog: Boolean = false,
+  val showSubscriptionDialog: Boolean = false,
+  val isProSubscribed: Boolean = false,
   val isDetectingLocation: Boolean = false,
   val locationDetectionMessage: String = "",
   val isPwaServerRunning: Boolean = false,
@@ -53,6 +56,7 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
   private val soundHelper = MosqueSoundHelper(application.applicationContext)
   private val locationHelper = LocationHelper(application.applicationContext)
   private val pwaServer = MosqueLocalPwaServer(application.applicationContext)
+  val billingManager = MosqueBillingManager(application.applicationContext)
 
   private val _uiState = MutableStateFlow(MosqueUiState(settings = repository.settingsFlow.value))
   val uiState: StateFlow<MosqueUiState> = _uiState.asStateFlow()
@@ -60,6 +64,13 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
   private var lastTriggeredPrayerMinute: String = ""
 
   init {
+    // Observe subscription state
+    viewModelScope.launch {
+      billingManager.isProSubscribed.collect { subscribed ->
+        _uiState.update { it.copy(isProSubscribed = subscribed) }
+      }
+    }
+
     // Observe settings changes
     viewModelScope.launch {
       repository.settingsFlow.collect { settings ->
@@ -409,6 +420,39 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
     pwaServer.stopServer()
     pwaServer.updateSettings(_uiState.value.settings)
     pwaServer.startServer()
+  }
+
+  fun setSubscriptionDialogVisible(visible: Boolean) {
+    _uiState.update { it.copy(showSubscriptionDialog = visible) }
+  }
+
+  fun onScreencastClicked() {
+    if (_uiState.value.isProSubscribed) {
+      setCastGuideDialogVisible(true)
+    } else {
+      setSubscriptionDialogVisible(true)
+    }
+  }
+
+  fun simulateToggleProSubscription() {
+    val current = _uiState.value.isProSubscribed
+    billingManager.setSubscriptionState(!current)
+    if (!current) {
+      setSubscriptionDialogVisible(false)
+      setCastGuideDialogVisible(true)
+    }
+  }
+
+  fun launchPlayStoreSubscription(activity: android.app.Activity) {
+    billingManager.launchSubscription(activity) {
+      billingManager.setSubscriptionState(true)
+      setSubscriptionDialogVisible(false)
+      setCastGuideDialogVisible(true)
+    }
+  }
+
+  fun restorePurchases() {
+    billingManager.queryActivePurchases()
   }
 
   override fun onCleared() {
