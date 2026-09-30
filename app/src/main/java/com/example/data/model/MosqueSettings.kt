@@ -11,6 +11,7 @@ data class MosqueSettings(
   val backgroundType: String = "preset_twilight", // preset_twilight, preset_emerald, gradient_emerald, gradient_midnight, gradient_sunset, custom_uri
   val customBackgroundUri: String = "",
   val overlayDarkness: Float = 0.50f, // 0.2f to 0.85f
+  val tvLayoutTheme: String = "modern_split", // modern_split, vertical_sidebar, center_dome, cinematic_ambient, grid_signage
   val runningTexts: List<String> = listOf(
     "Selamat datang di Masjid Agung Al-Kautsar Kediri. Lurus dan rapatkan shaf saat sholat berjamaah.",
     "Rasulullah SAW bersabda: 'Siapa yang membangun masjid karena Allah, maka Allah bangunkan baginya rumah di surga.' (HR. Bukhari)",

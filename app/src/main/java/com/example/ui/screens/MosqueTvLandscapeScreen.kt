@@ -86,16 +86,8 @@ fun MosqueTvLandscapeScreen(
       overlayDarkness = uiState.settings.overlayDarkness,
       modifier = Modifier.fillMaxSize()
     ) {
-      Column(
-        modifier = Modifier
-          .fillMaxSize()
-          .padding(
-            top = if (isCompactHeight) 6.dp else 12.dp,
-            bottom = 0.dp
-          ),
-        verticalArrangement = Arrangement.SpaceBetween
-      ) {
-        // 1. TOP HEADER BAR
+      val headerContent: @Composable () -> Unit = {
+        // TOP HEADER BAR
         Row(
           modifier = Modifier
             .fillMaxWidth()
@@ -249,63 +241,50 @@ fun MosqueTvLandscapeScreen(
             }
           }
         }
+      }
 
-        Spacer(modifier = Modifier.height(if (isCompactHeight) 4.dp else 8.dp))
-
-        // 2. CENTER STAGE (Clock & Info Carousel)
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .weight(1f)
-            .padding(horizontal = if (screenWidth < 600.dp) 10.dp else 20.dp),
-          horizontalArrangement = Arrangement.spacedBy(16.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          // Digital Clock Display
-          Box(modifier = Modifier.weight(1.2f)) {
-            DigitalClockDisplay(
-              timeFormatted = uiState.timeFormatted,
-              secondsFormatted = uiState.secondsFormatted,
-              timeFontSize = if (isCompactHeight) 52.sp else 68.sp,
-              secondsFontSize = if (isCompactHeight) 18.sp else 24.sp,
-              modifier = Modifier.fillMaxWidth()
-            )
-          }
-
-          // Information Slide Carousel
-          Box(modifier = Modifier.weight(1.3f)) {
-            MosqueInfoCarousel(
-              settings = uiState.settings,
-              activeSlideIndex = uiState.activeInfoSlideIndex,
-              modifier = Modifier.fillMaxWidth()
-            )
-          }
+      // SELECTABLE TV LAYOUT THEMES
+      when (uiState.settings.tvLayoutTheme) {
+        "vertical_sidebar" -> {
+          VerticalSidebarTvLayout(
+            uiState = uiState,
+            screenWidth = screenWidth,
+            isCompactHeight = isCompactHeight,
+            headerContent = headerContent
+          )
         }
-
-        Spacer(modifier = Modifier.height(if (isCompactHeight) 4.dp else 8.dp))
-
-        // 3. BOTTOM PRAYER TIME CARDS ROW (All 8 Prayer Times)
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = if (screenWidth < 600.dp) 8.dp else 20.dp),
-          horizontalArrangement = Arrangement.spacedBy(if (screenWidth < 600.dp) 4.dp else 8.dp)
-        ) {
-          uiState.prayerTimes.forEach { item ->
-            PrayerTimeCard(
-              item = item,
-              modifier = Modifier.weight(1f)
-            )
-          }
+        "center_dome" -> {
+          CenterDomeTvLayout(
+            uiState = uiState,
+            screenWidth = screenWidth,
+            isCompactHeight = isCompactHeight,
+            headerContent = headerContent
+          )
         }
-
-        Spacer(modifier = Modifier.height(if (isCompactHeight) 4.dp else 8.dp))
-
-        // 4. FOOTER: RUNNING TEXT (MARQUEE)
-        MarqueeTextBanner(
-          texts = uiState.settings.runningTexts,
-          velocityDp = uiState.settings.runningTextSpeed
-        )
+        "cinematic_ambient" -> {
+          CinematicAmbientTvLayout(
+            uiState = uiState,
+            screenWidth = screenWidth,
+            isCompactHeight = isCompactHeight,
+            headerContent = headerContent
+          )
+        }
+        "grid_signage" -> {
+          GridSignageTvLayout(
+            uiState = uiState,
+            screenWidth = screenWidth,
+            isCompactHeight = isCompactHeight,
+            headerContent = headerContent
+          )
+        }
+        else -> {
+          ModernSplitTvLayout(
+            uiState = uiState,
+            screenWidth = screenWidth,
+            isCompactHeight = isCompactHeight,
+            headerContent = headerContent
+          )
+        }
       }
 
       // Overlays for Adzan / Iqomah / Sholat

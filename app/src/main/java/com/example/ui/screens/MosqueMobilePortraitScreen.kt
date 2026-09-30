@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Mosque
@@ -48,6 +49,8 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.StayCurrentLandscape
 import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material.icons.filled.ViewSidebar
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.ui.text.input.KeyboardType
 import java.text.NumberFormat
 import java.util.Locale
@@ -117,6 +120,7 @@ fun MosqueMobilePortraitScreen(
   onSetBackgroundType: (String) -> Unit,
   onSetCustomBackgroundUri: (String) -> Unit,
   onSetOverlayDarkness: (Float) -> Unit,
+  onSetTvLayoutTheme: (String) -> Unit,
   onAddRunningText: (String) -> Unit,
   onRemoveRunningText: (Int) -> Unit,
   onTestAdzan: (PrayerType) -> Unit,
@@ -445,7 +449,132 @@ fun MosqueMobilePortraitScreen(
       // TAB CONTENTS
       when (selectedTab) {
         0 -> {
-          // Tab 0: Tampilan & Background
+          // Tab 0: Tampilan, Tata Letak TV & Background
+          item {
+            Card(
+              modifier = Modifier.fillMaxWidth(),
+              colors = CardDefaults.cardColors(containerColor = Emerald900.copy(alpha = 0.85f)),
+              shape = RoundedCornerShape(14.dp),
+              border = BorderStroke(1.5.dp, Gold400.copy(alpha = 0.7f))
+            ) {
+              Column(modifier = Modifier.padding(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Box(
+                    modifier = Modifier
+                      .size(36.dp)
+                      .background(Emerald800, CircleShape),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(Icons.Default.Dashboard, contentDescription = null, tint = Gold400, modifier = Modifier.size(20.dp))
+                  }
+                  Spacer(modifier = Modifier.width(10.dp))
+                  Column {
+                    Text("Pilihan Tata Letak (Tema Layar TV)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Gold400)
+                    Text("Ubah posisi jam, jadwal sholat, dan info di TV", fontSize = 11.sp, color = IvoryWhite)
+                  }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                val layouts = listOf(
+                  Triple("modern_split", "1. Modern Split (Bawaan)", "Jam di kiri, info di kanan, 8 sholat di bawah"),
+                  Triple("vertical_sidebar", "2. Vertical Sidebar", "Sidebar jam & jadwal sholat di kiri, area info luas di kanan"),
+                  Triple("center_dome", "3. Center Dome (Simetris)", "Jam raksasa di tengah, sholat simetris 4 kiri & 4 kanan"),
+                  Triple("cinematic_ambient", "4. Cinematic Ambient", "Efek floating transparan, foto masjid tampil maksimal"),
+                  Triple("grid_signage", "5. Grid Signage (Dashboard)", "Format 4 kuadran terstruktur, semua info tampil bersamaan")
+                )
+
+                layouts.forEach { (themeKey, title, desc) ->
+                  val isSelected = uiState.settings.tvLayoutTheme == themeKey
+                  Box(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .padding(vertical = 4.dp)
+                      .background(
+                        color = if (isSelected) Gold500 else Obsidian800,
+                        shape = RoundedCornerShape(10.dp)
+                      )
+                      .border(
+                        width = if (isSelected) 1.5.dp else 1.dp,
+                        color = if (isSelected) Gold400 else Color.White.copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(10.dp)
+                      )
+                      .clickable { onSetTvLayoutTheme(themeKey) }
+                      .padding(horizontal = 12.dp, vertical = 10.dp)
+                  ) {
+                    Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.SpaceBetween,
+                      verticalAlignment = Alignment.CenterVertically
+                    ) {
+                      Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                          text = title,
+                          fontSize = 13.sp,
+                          fontWeight = FontWeight.Bold,
+                          color = if (isSelected) Color.Black else IvoryWhite
+                        )
+                        Text(
+                          text = desc,
+                          fontSize = 11.sp,
+                          color = if (isSelected) Color.Black.copy(alpha = 0.75f) else SoftGray
+                        )
+                      }
+                      if (isSelected) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(Icons.Default.Check, contentDescription = "Terpilih", tint = Color.Black)
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          item {
+            Spacer(modifier = Modifier.height(6.dp))
+            Card(
+              modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onOpenCastGuide() },
+              colors = CardDefaults.cardColors(containerColor = Obsidian800),
+              shape = RoundedCornerShape(12.dp),
+              border = BorderStroke(1.dp, Emerald500.copy(alpha = 0.6f))
+            ) {
+              Row(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Box(
+                    modifier = Modifier.size(36.dp).background(Emerald800, CircleShape),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(Icons.Default.Tv, contentDescription = null, tint = Gold400, modifier = Modifier.size(20.dp))
+                  }
+                  Spacer(modifier = Modifier.width(10.dp))
+                  Column {
+                    Text("Sambungkan ke Layar TV Masjid", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = IvoryWhite)
+                    Text(
+                      text = if (uiState.pwaServerUrl.isNotBlank()) "PWA Offline: ${uiState.pwaServerUrl} (HP bisa dicabut/dibawa pulang)" else "Miracast & Web Server Offline TV",
+                      fontSize = 11.sp,
+                      color = Emerald300
+                    )
+                  }
+                }
+                Icon(Icons.Default.Cast, contentDescription = null, tint = Gold400, modifier = Modifier.size(20.dp))
+              }
+            }
+          }
+
+          item {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text("Pilihan Gambar & Warna Background TV:", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Gold400)
+          }
+
           item {
             Card(
               modifier = Modifier.fillMaxWidth(),

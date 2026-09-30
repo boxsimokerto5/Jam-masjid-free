@@ -23,6 +23,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Locale
+import com.example.server.MosqueLocalPwaServer
 
 data class MosqueUiState(
   val settings: MosqueSettings = MosqueSettings(),
@@ -41,7 +42,9 @@ data class MosqueUiState(
   val isForcedTvMode: Boolean = false,
   val showCastGuideDialog: Boolean = false,
   val isDetectingLocation: Boolean = false,
-  val locationDetectionMessage: String = ""
+  val locationDetectionMessage: String = "",
+  val isPwaServerRunning: Boolean = false,
+  val pwaServerUrl: String = ""
 )
 
 class MosqueClockViewModel(application: Application) : AndroidViewModel(application) {
@@ -49,6 +52,7 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
   private val repository = SettingsRepository(application.applicationContext)
   private val soundHelper = MosqueSoundHelper(application.applicationContext)
   private val locationHelper = LocationHelper(application.applicationContext)
+  private val pwaServer = MosqueLocalPwaServer(application.applicationContext)
 
   private val _uiState = MutableStateFlow(MosqueUiState(settings = repository.settingsFlow.value))
   val uiState: StateFlow<MosqueUiState> = _uiState.asStateFlow()
@@ -60,9 +64,26 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
     viewModelScope.launch {
       repository.settingsFlow.collect { settings ->
         _uiState.update { it.copy(settings = settings) }
+        pwaServer.updateSettings(settings)
         recalculateTimes()
       }
     }
+
+    // Observe PWA server states
+    viewModelScope.launch {
+      pwaServer.isRunning.collect { running ->
+        _uiState.update { it.copy(isPwaServerRunning = running) }
+      }
+    }
+    viewModelScope.launch {
+      pwaServer.serverUrl.collect { url ->
+        _uiState.update { it.copy(pwaServerUrl = url) }
+      }
+    }
+
+    // Auto-start PWA server so Smart TV can connect immediately
+    pwaServer.updateSettings(repository.settingsFlow.value)
+    pwaServer.startServer()
 
     // Main clock ticker loop (ticks every 1 second)
     viewModelScope.launch {
@@ -324,6 +345,11 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
     updateSettings(updated)
   }
 
+  fun setTvLayoutTheme(theme: String) {
+    val updated = _uiState.value.settings.copy(tvLayoutTheme = theme)
+    updateSettings(updated)
+  }
+
   fun setCustomBackgroundUri(uriString: String) {
     val updated = _uiState.value.settings.copy(
       backgroundType = "custom_uri",
@@ -370,8 +396,24 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
     updateSettings(updated)
   }
 
+  fun togglePwaServer() {
+    if (_uiState.value.isPwaServerRunning) {
+      pwaServer.stopServer()
+    } else {
+      pwaServer.updateSettings(_uiState.value.settings)
+      pwaServer.startServer()
+    }
+  }
+
+  fun restartPwaServer() {
+    pwaServer.stopServer()
+    pwaServer.updateSettings(_uiState.value.settings)
+    pwaServer.startServer()
+  }
+
   override fun onCleared() {
     super.onCleared()
+    pwaServer.stopServer()
     soundHelper.release()
   }
 }

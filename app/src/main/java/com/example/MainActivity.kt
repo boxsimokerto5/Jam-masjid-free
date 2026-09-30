@@ -140,6 +140,9 @@ class MainActivity : ComponentActivity() {
                 onSetOverlayDarkness = { darkness ->
                   viewModel.setOverlayDarkness(darkness)
                 },
+                onSetTvLayoutTheme = { theme ->
+                  viewModel.setTvLayoutTheme(theme)
+                },
                 onAddRunningText = { text ->
                   viewModel.addRunningText(text)
                 },
@@ -163,6 +166,8 @@ class MainActivity : ComponentActivity() {
           // Miracast / Cast Guide Dialog
           if (uiState.showCastGuideDialog) {
             CastGuideDialog(
+              pwaServerUrl = uiState.pwaServerUrl,
+              isPwaServerRunning = uiState.isPwaServerRunning,
               onDismiss = {
                 viewModel.setCastGuideDialogVisible(false)
               },
