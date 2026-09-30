@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -24,23 +26,36 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Mosque
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.PinDrop
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.StayCurrentLandscape
 import androidx.compose.material.icons.filled.Tv
+import androidx.compose.ui.text.input.KeyboardType
+import java.text.NumberFormat
+import java.util.Locale
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -62,11 +77,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.example.data.model.CityData
 import com.example.data.model.CityPreset
 import com.example.data.model.MosqueSettings
@@ -96,6 +113,7 @@ fun MosqueMobilePortraitScreen(
   onOpenCastGuide: () -> Unit,
   onUpdateSettings: (MosqueSettings) -> Unit,
   onSelectCity: (CityPreset) -> Unit,
+  onAutoDetectLocation: () -> Unit,
   onSetBackgroundType: (String) -> Unit,
   onSetCustomBackgroundUri: (String) -> Unit,
   onSetOverlayDarkness: (Float) -> Unit,
@@ -115,6 +133,35 @@ fun MosqueMobilePortraitScreen(
   ) { uri: Uri? ->
     if (uri != null) {
       onSetCustomBackgroundUri(uri.toString())
+    }
+  }
+
+  val context = LocalContext.current
+  var citySearchQuery by remember { mutableStateOf("") }
+
+  // Location Permission Launcher
+  val locationPermissionLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.RequestMultiplePermissions()
+  ) { permissions ->
+    val fineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
+    val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+    if (fineGranted || coarseGranted) {
+      onAutoDetectLocation()
+    }
+  }
+
+  fun requestAutoLocation() {
+    val fineCheck = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+    val coarseCheck = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION)
+    if (fineCheck == PackageManager.PERMISSION_GRANTED || coarseCheck == PackageManager.PERMISSION_GRANTED) {
+      onAutoDetectLocation()
+    } else {
+      locationPermissionLauncher.launch(
+        arrayOf(
+          Manifest.permission.ACCESS_FINE_LOCATION,
+          Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+      )
     }
   }
 
@@ -495,26 +542,164 @@ fun MosqueMobilePortraitScreen(
         }
 
         1 -> {
-          // Tab 1: Jadwal & Lokasi
+          // Tab 1: Jadwal & Lokasi Otomatis
           item {
-            Text("Pilihan Kota Cepat:", fontSize = 13.sp, color = IvoryWhite, fontWeight = FontWeight.Bold)
+            Card(
+              modifier = Modifier.fillMaxWidth(),
+              colors = CardDefaults.cardColors(containerColor = Emerald900.copy(alpha = 0.85f)),
+              shape = RoundedCornerShape(14.dp),
+              border = BorderStroke(1.5.dp, Gold400.copy(alpha = 0.7f))
+            ) {
+              Column(modifier = Modifier.padding(14.dp)) {
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                      modifier = Modifier
+                        .size(36.dp)
+                        .background(Emerald800, CircleShape),
+                      contentAlignment = Alignment.Center
+                    ) {
+                      Icon(Icons.Default.MyLocation, contentDescription = null, tint = Gold400, modifier = Modifier.size(20.dp))
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                      Text("Jadwal Sholat Otomatis per Area", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Gold400)
+                      Text("Akurasi hisab Kemenag sesuai GPS/Jaringan", fontSize = 11.sp, color = IvoryWhite)
+                    }
+                  }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Current Active Area Info Box
+                Box(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                    .padding(12.dp)
+                ) {
+                  Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                      Icon(Icons.Default.PinDrop, contentDescription = null, tint = Emerald300, modifier = Modifier.size(16.dp))
+                      Spacer(modifier = Modifier.width(6.dp))
+                      Text(
+                        text = "Area Aktif: ${uiState.settings.cityName}",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = IvoryWhite
+                      )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                      text = "Alamat: ${uiState.settings.mosqueAddress}",
+                      fontSize = 11.sp,
+                      color = SoftGray
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                      text = "Koordinat: ${String.format(java.util.Locale.US, "%.4f, %.4f", uiState.settings.latitude, uiState.settings.longitude)} • Zona: UTC+${uiState.settings.timezoneOffset.toInt()} (${if (uiState.settings.timezoneOffset == 7.0) "WIB" else if (uiState.settings.timezoneOffset == 8.0) "WITA" else "WIT"})",
+                      fontSize = 11.sp,
+                      fontFamily = FontFamily.Monospace,
+                      color = Gold400
+                    )
+                  }
+                }
+
+                if (uiState.locationDetectionMessage.isNotBlank()) {
+                  Spacer(modifier = Modifier.height(8.dp))
+                  Text(
+                    text = uiState.locationDetectionMessage,
+                    fontSize = 11.sp,
+                    color = Emerald300,
+                    fontWeight = FontWeight.Medium
+                  )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                  onClick = { requestAutoLocation() },
+                  enabled = !uiState.isDetectingLocation,
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("detect_location_button"),
+                  colors = ButtonDefaults.buttonColors(containerColor = Gold500, contentColor = Color.Black)
+                ) {
+                  if (uiState.isDetectingLocation) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.Black, strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Mendeteksi Koordinat Area...", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                  } else {
+                    Icon(Icons.Default.MyLocation, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Deteksi Lokasi Saya Sekarang (Otomatis)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                  }
+                }
+              }
+            }
           }
 
+          // Search manual city
           item {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-              items(CityData.cities) { city ->
-                val isSelected = uiState.settings.cityName.equals(city.name, ignoreCase = true)
-                FilterChip(
-                  selected = isSelected,
-                  onClick = { onSelectCity(city) },
-                  label = { Text(city.name) },
-                  colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = Gold500,
-                    selectedLabelColor = Color.Black,
-                    containerColor = Obsidian800,
-                    labelColor = IvoryWhite
+            Card(
+              modifier = Modifier.fillMaxWidth(),
+              colors = CardDefaults.cardColors(containerColor = Obsidian800),
+              shape = RoundedCornerShape(12.dp)
+            ) {
+              Column(modifier = Modifier.padding(12.dp)) {
+                Text("Pilih Manual Kota / Kabupaten di Indonesia:", fontSize = 13.sp, color = IvoryWhite, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                  value = citySearchQuery,
+                  onValueChange = { citySearchQuery = it },
+                  placeholder = { Text("Cari kota/kabupaten... (misal: Kediri, Surabaya, Jakarta)", fontSize = 12.sp) },
+                  leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Gold400, modifier = Modifier.size(18.dp)) },
+                  modifier = Modifier.fillMaxWidth(),
+                  singleLine = true,
+                  colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Gold400,
+                    unfocusedBorderColor = Color.DarkGray,
+                    focusedTextColor = IvoryWhite,
+                    unfocusedTextColor = IvoryWhite
                   )
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                val filteredCities = if (citySearchQuery.isBlank()) {
+                  CityData.cities
+                } else {
+                  CityData.cities.filter {
+                    it.name.contains(citySearchQuery, ignoreCase = true) ||
+                    it.province.contains(citySearchQuery, ignoreCase = true)
+                  }
+                }
+
+                if (filteredCities.isEmpty()) {
+                  Text("Tidak ada kota yang cocok dengan '$citySearchQuery'", fontSize = 11.sp, color = SoftGray)
+                } else {
+                  LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    items(filteredCities) { city ->
+                      val isSelected = uiState.settings.cityName.equals(city.name, ignoreCase = true)
+                      FilterChip(
+                        selected = isSelected,
+                        onClick = { onSelectCity(city) },
+                        label = { Text("${city.name} (${city.province})") },
+                        colors = FilterChipDefaults.filterChipColors(
+                          selectedContainerColor = Gold500,
+                          selectedLabelColor = Color.Black,
+                          containerColor = Obsidian900,
+                          labelColor = IvoryWhite
+                        )
+                      )
+                    }
+                  }
+                }
               }
             }
           }
@@ -523,6 +708,7 @@ fun MosqueMobilePortraitScreen(
             Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Obsidian800), shape = RoundedCornerShape(12.dp)) {
               Column(modifier = Modifier.padding(12.dp)) {
                 Text("Koreksi Menit Sholat (Ihtiyat)", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = IvoryWhite)
+                Text("Penyesuaian toleransi menit lokal jika ada selisih kalender", fontSize = 11.sp, color = SoftGray)
                 Spacer(modifier = Modifier.height(8.dp))
                 IhtiyatRow("Subuh", uiState.settings.correctionSubuh) { d -> onUpdateSettings(uiState.settings.copy(correctionSubuh = (uiState.settings.correctionSubuh + d).coerceIn(-10, 10))) }
                 IhtiyatRow("Dzuhur", uiState.settings.correctionDzuhur) { d -> onUpdateSettings(uiState.settings.copy(correctionDzuhur = (uiState.settings.correctionDzuhur + d).coerceIn(-10, 10))) }
@@ -626,30 +812,353 @@ fun MosqueMobilePortraitScreen(
         }
 
         else -> {
-          // Tab 4: Kas & Info Masjid
+          // Tab 4: Kas, Petugas Jum'at, Hadits & Profil Masjid
+          // 1. EDIT LAPORAN KEUANGAN KAS MASJID
           item {
-            var name by remember { mutableStateOf(uiState.settings.mosqueName) }
-            var address by remember { mutableStateOf(uiState.settings.mosqueAddress) }
+            val rupiahFormatter = remember {
+              NumberFormat.getCurrencyInstance(Locale("id", "ID")).apply {
+                maximumFractionDigits = 0
+              }
+            }
+            var saldoText by remember(uiState.settings.kasSaldo) { mutableStateOf(uiState.settings.kasSaldo.toString()) }
+            var masukText by remember(uiState.settings.kasPemasukan) { mutableStateOf(uiState.settings.kasPemasukan.toString()) }
+            var keluarText by remember(uiState.settings.kasPengeluaran) { mutableStateOf(uiState.settings.kasPengeluaran.toString()) }
 
-            Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Obsidian800), shape = RoundedCornerShape(12.dp)) {
-              Column(modifier = Modifier.padding(12.dp)) {
-                Text("Nama & Alamat Masjid", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = IvoryWhite)
+            Card(
+              modifier = Modifier.fillMaxWidth(),
+              colors = CardDefaults.cardColors(containerColor = Obsidian800),
+              shape = RoundedCornerShape(14.dp),
+              border = BorderStroke(1.dp, Gold400.copy(alpha = 0.4f))
+            ) {
+              Column(modifier = Modifier.padding(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Box(
+                    modifier = Modifier
+                      .size(36.dp)
+                      .background(Emerald800, CircleShape),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = Gold400, modifier = Modifier.size(20.dp))
+                  }
+                  Spacer(modifier = Modifier.width(10.dp))
+                  Column {
+                    Text("Laporan Keuangan Kas Masjid", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Gold400)
+                    Text("Ditampilkan transparan di carousel info TV", fontSize = 11.sp, color = SoftGray)
+                  }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Saldo Kas
+                OutlinedTextField(
+                  value = saldoText,
+                  onValueChange = { saldoText = it.filter { ch -> ch.isDigit() } },
+                  label = { Text("Saldo Kas Akhir (Rp)") },
+                  keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                  modifier = Modifier.fillMaxWidth(),
+                  supportingText = {
+                    val num = saldoText.toLongOrNull() ?: 0L
+                    Text("Pratinjau: ${rupiahFormatter.format(num)}", color = Emerald300, fontSize = 11.sp)
+                  },
+                  colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Gold400,
+                    unfocusedBorderColor = Color.DarkGray,
+                    focusedTextColor = IvoryWhite,
+                    unfocusedTextColor = IvoryWhite
+                  )
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Pemasukan
+                OutlinedTextField(
+                  value = masukText,
+                  onValueChange = { masukText = it.filter { ch -> ch.isDigit() } },
+                  label = { Text("Pemasukan Kas Pekan Ini (Rp)") },
+                  keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                  modifier = Modifier.fillMaxWidth(),
+                  supportingText = {
+                    val num = masukText.toLongOrNull() ?: 0L
+                    Text("Pratinjau: +${rupiahFormatter.format(num)}", color = Emerald500, fontSize = 11.sp)
+                  },
+                  colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Gold400,
+                    unfocusedBorderColor = Color.DarkGray,
+                    focusedTextColor = IvoryWhite,
+                    unfocusedTextColor = IvoryWhite
+                  )
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Pengeluaran
+                OutlinedTextField(
+                  value = keluarText,
+                  onValueChange = { keluarText = it.filter { ch -> ch.isDigit() } },
+                  label = { Text("Pengeluaran Kas Pekan Ini (Rp)") },
+                  keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                  modifier = Modifier.fillMaxWidth(),
+                  supportingText = {
+                    val num = keluarText.toLongOrNull() ?: 0L
+                    Text("Pratinjau: -${rupiahFormatter.format(num)}", color = Color(0xFFF87171), fontSize = 11.sp)
+                  },
+                  colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Gold400,
+                    unfocusedBorderColor = Color.DarkGray,
+                    focusedTextColor = IvoryWhite,
+                    unfocusedTextColor = IvoryWhite
+                  )
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Button(
+                  onClick = {
+                    val s = saldoText.toLongOrNull() ?: uiState.settings.kasSaldo
+                    val m = masukText.toLongOrNull() ?: uiState.settings.kasPemasukan
+                    val k = keluarText.toLongOrNull() ?: uiState.settings.kasPengeluaran
+                    onUpdateSettings(uiState.settings.copy(kasSaldo = s, kasPemasukan = m, kasPengeluaran = k))
+                  },
+                  modifier = Modifier.fillMaxWidth(),
+                  colors = ButtonDefaults.buttonColors(containerColor = Gold500, contentColor = Color.Black)
+                ) {
+                  Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text("Simpan Laporan Kas", fontWeight = FontWeight.Bold)
+                }
+              }
+            }
+          }
+
+          // 2. EDIT PETUGAS SHOLAT JUM'AT
+          item {
+            var khotibText by remember(uiState.settings.jumatKhotib) { mutableStateOf(uiState.settings.jumatKhotib) }
+            var imamText by remember(uiState.settings.jumatImam) { mutableStateOf(uiState.settings.jumatImam) }
+            var muadzinText by remember(uiState.settings.jumatMuadzin) { mutableStateOf(uiState.settings.jumatMuadzin) }
+
+            Card(
+              modifier = Modifier.fillMaxWidth(),
+              colors = CardDefaults.cardColors(containerColor = Obsidian800),
+              shape = RoundedCornerShape(14.dp),
+              border = BorderStroke(1.dp, Emerald500.copy(alpha = 0.4f))
+            ) {
+              Column(modifier = Modifier.padding(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Box(
+                    modifier = Modifier
+                      .size(36.dp)
+                      .background(Emerald800, CircleShape),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = Gold400, modifier = Modifier.size(20.dp))
+                  }
+                  Spacer(modifier = Modifier.width(10.dp))
+                  Column {
+                    Text("Jadwal Petugas Sholat Jum'at", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Gold400)
+                    Text("Jadwal Khotib, Imam, & Muadzin Jum'at", fontSize = 11.sp, color = SoftGray)
+                  }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                  value = khotibText,
+                  onValueChange = { khotibText = it },
+                  label = { Text("Nama Khotib Jum'at") },
+                  modifier = Modifier.fillMaxWidth(),
+                  colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Gold400,
+                    unfocusedBorderColor = Color.DarkGray,
+                    focusedTextColor = IvoryWhite,
+                    unfocusedTextColor = IvoryWhite
+                  )
+                )
+
                 Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                  value = imamText,
+                  onValueChange = { imamText = it },
+                  label = { Text("Nama Imam Sholat Jum'at") },
+                  modifier = Modifier.fillMaxWidth(),
+                  colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Gold400,
+                    unfocusedBorderColor = Color.DarkGray,
+                    focusedTextColor = IvoryWhite,
+                    unfocusedTextColor = IvoryWhite
+                  )
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                  value = muadzinText,
+                  onValueChange = { muadzinText = it },
+                  label = { Text("Nama Muadzin Jum'at") },
+                  modifier = Modifier.fillMaxWidth(),
+                  colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Gold400,
+                    unfocusedBorderColor = Color.DarkGray,
+                    focusedTextColor = IvoryWhite,
+                    unfocusedTextColor = IvoryWhite
+                  )
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Button(
+                  onClick = {
+                    onUpdateSettings(
+                      uiState.settings.copy(
+                        jumatKhotib = khotibText.trim(),
+                        jumatImam = imamText.trim(),
+                        jumatMuadzin = muadzinText.trim()
+                      )
+                    )
+                  },
+                  modifier = Modifier.fillMaxWidth(),
+                  colors = ButtonDefaults.buttonColors(containerColor = Emerald500, contentColor = Color.Black)
+                ) {
+                  Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text("Simpan Petugas Jum'at", fontWeight = FontWeight.Bold)
+                }
+              }
+            }
+          }
+
+          // 3. EDIT MUTIARA HADITS / PESAN HARIAN
+          item {
+            var haditsText by remember(uiState.settings.mutiaraHadits) { mutableStateOf(uiState.settings.mutiaraHadits) }
+
+            Card(
+              modifier = Modifier.fillMaxWidth(),
+              colors = CardDefaults.cardColors(containerColor = Obsidian800),
+              shape = RoundedCornerShape(14.dp),
+              border = BorderStroke(1.dp, Gold400.copy(alpha = 0.3f))
+            ) {
+              Column(modifier = Modifier.padding(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Box(
+                    modifier = Modifier
+                      .size(36.dp)
+                      .background(Emerald800, CircleShape),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Gold400, modifier = Modifier.size(20.dp))
+                  }
+                  Spacer(modifier = Modifier.width(10.dp))
+                  Column {
+                    Text("Mutiara Hadits / Pesan Harian", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Gold400)
+                    Text("Slide mutiara hikmah di layar TV", fontSize = 11.sp, color = SoftGray)
+                  }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                  value = haditsText,
+                  onValueChange = { haditsText = it },
+                  label = { Text("Teks Hadits / Pesan Hikmah") },
+                  modifier = Modifier.fillMaxWidth(),
+                  minLines = 2,
+                  maxLines = 4,
+                  colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Gold400,
+                    unfocusedBorderColor = Color.DarkGray,
+                    focusedTextColor = IvoryWhite,
+                    unfocusedTextColor = IvoryWhite
+                  )
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Button(
+                  onClick = {
+                    onUpdateSettings(uiState.settings.copy(mutiaraHadits = haditsText.trim()))
+                  },
+                  modifier = Modifier.fillMaxWidth(),
+                  colors = ButtonDefaults.buttonColors(containerColor = Gold500, contentColor = Color.Black)
+                ) {
+                  Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text("Simpan Pesan Hadits", fontWeight = FontWeight.Bold)
+                }
+              }
+            }
+          }
+
+          // 4. EDIT IDENTITAS MASJID
+          item {
+            var name by remember(uiState.settings.mosqueName) { mutableStateOf(uiState.settings.mosqueName) }
+            var address by remember(uiState.settings.mosqueAddress) { mutableStateOf(uiState.settings.mosqueAddress) }
+
+            Card(
+              modifier = Modifier.fillMaxWidth(),
+              colors = CardDefaults.cardColors(containerColor = Obsidian800),
+              shape = RoundedCornerShape(14.dp),
+              border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+            ) {
+              Column(modifier = Modifier.padding(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Box(
+                    modifier = Modifier
+                      .size(36.dp)
+                      .background(Emerald800, CircleShape),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(Icons.Default.Mosque, contentDescription = null, tint = Gold400, modifier = Modifier.size(20.dp))
+                  }
+                  Spacer(modifier = Modifier.width(10.dp))
+                  Column {
+                    Text("Identitas & Profil Masjid", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Gold400)
+                    Text("Nama dan alamat masjid pada judul layar", fontSize = 11.sp, color = SoftGray)
+                  }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 OutlinedTextField(
                   value = name,
-                  onValueChange = { name = it; onUpdateSettings(uiState.settings.copy(mosqueName = it)) },
+                  onValueChange = { name = it },
                   label = { Text("Nama Masjid") },
                   modifier = Modifier.fillMaxWidth(),
-                  colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Gold400, unfocusedBorderColor = SoftGray, focusedTextColor = IvoryWhite, unfocusedTextColor = IvoryWhite)
+                  colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Gold400,
+                    unfocusedBorderColor = Color.DarkGray,
+                    focusedTextColor = IvoryWhite,
+                    unfocusedTextColor = IvoryWhite
+                  )
                 )
+
                 Spacer(modifier = Modifier.height(8.dp))
+
                 OutlinedTextField(
                   value = address,
-                  onValueChange = { address = it; onUpdateSettings(uiState.settings.copy(mosqueAddress = it)) },
-                  label = { Text("Alamat / Kota") },
+                  onValueChange = { address = it },
+                  label = { Text("Alamat / Kota Masjid") },
                   modifier = Modifier.fillMaxWidth(),
-                  colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Gold400, unfocusedBorderColor = SoftGray, focusedTextColor = IvoryWhite, unfocusedTextColor = IvoryWhite)
+                  colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Gold400,
+                    unfocusedBorderColor = Color.DarkGray,
+                    focusedTextColor = IvoryWhite,
+                    unfocusedTextColor = IvoryWhite
+                  )
                 )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Button(
+                  onClick = {
+                    onUpdateSettings(uiState.settings.copy(mosqueName = name.trim(), mosqueAddress = address.trim()))
+                  },
+                  modifier = Modifier.fillMaxWidth(),
+                  colors = ButtonDefaults.buttonColors(containerColor = Emerald800, contentColor = IvoryWhite)
+                ) {
+                  Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text("Simpan Profil Masjid", fontWeight = FontWeight.Bold)
+                }
               }
             }
           }

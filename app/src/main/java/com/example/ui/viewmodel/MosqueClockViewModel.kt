@@ -14,6 +14,7 @@ import com.example.data.prayer.PrayerCalculator
 import com.example.data.repository.SettingsRepository
 import com.example.data.sound.MosqueSoundHelper
 import kotlinx.coroutines.delay
+import com.example.data.location.LocationHelper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,13 +39,16 @@ data class MosqueUiState(
   val sholatMinutesLeft: Int = 0,
   val activeInfoSlideIndex: Int = 0, // 0: Kas, 1: Petugas Jumat, 2: Hadits
   val isForcedTvMode: Boolean = false,
-  val showCastGuideDialog: Boolean = false
+  val showCastGuideDialog: Boolean = false,
+  val isDetectingLocation: Boolean = false,
+  val locationDetectionMessage: String = ""
 )
 
 class MosqueClockViewModel(application: Application) : AndroidViewModel(application) {
 
   private val repository = SettingsRepository(application.applicationContext)
   private val soundHelper = MosqueSoundHelper(application.applicationContext)
+  private val locationHelper = LocationHelper(application.applicationContext)
 
   private val _uiState = MutableStateFlow(MosqueUiState(settings = repository.settingsFlow.value))
   val uiState: StateFlow<MosqueUiState> = _uiState.asStateFlow()
@@ -275,6 +279,44 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
       timezoneOffset = city.timezoneOffsetHours
     )
     updateSettings(updated)
+  }
+
+  fun autoDetectLocation(onFinished: ((Boolean, String) -> Unit)? = null) {
+    viewModelScope.launch {
+      _uiState.update { it.copy(isDetectingLocation = true) }
+      try {
+        val result = locationHelper.getCurrentOrBestLocation()
+        val current = _uiState.value.settings
+        val updated = current.copy(
+          cityName = result.cityName,
+          mosqueAddress = result.address,
+          latitude = result.latitude,
+          longitude = result.longitude,
+          timezoneOffset = result.timezoneOffset
+        )
+        updateSettings(updated)
+        val msg = if (result.isGpsSuccess) {
+          "Lokasi otomatis aktif: ${result.address} (${String.format(Locale.US, "%.4f, %.4f", result.latitude, result.longitude)})"
+        } else {
+          "Lokasi default digunakan: ${result.address}"
+        }
+        _uiState.update {
+          it.copy(
+            isDetectingLocation = false,
+            locationDetectionMessage = msg
+          )
+        }
+        onFinished?.invoke(result.isGpsSuccess, result.address)
+      } catch (e: Exception) {
+        _uiState.update {
+          it.copy(
+            isDetectingLocation = false,
+            locationDetectionMessage = "Gagal mendeteksi lokasi: ${e.message}"
+          )
+        }
+        onFinished?.invoke(false, "Gagal: ${e.message}")
+      }
+    }
   }
 
   fun setBackgroundType(bgType: String) {

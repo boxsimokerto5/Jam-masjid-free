@@ -37,6 +37,7 @@ data class MosqueSettings(
   val jumatKhotib: String = "Dr. H. Ahmad Fauzi, M.Ag",
   val jumatImam: String = "Ust. Muhammad Ridwan, Al-Hafidz",
   val jumatMuadzin: String = "Ust. Bilal Ramadhan",
+  val mutiaraHadits: String = "\"Sholat berjamaah itu lebih utama daripada sholat sendirian sebanyak 27 derajat.\" (HR. Bukhari & Muslim)",
   val isSoundAlertEnabled: Boolean = true
 ) {
   fun getIqomahMinutesFor(type: PrayerType): Int {

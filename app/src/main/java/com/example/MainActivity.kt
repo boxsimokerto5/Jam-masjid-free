@@ -128,6 +128,9 @@ class MainActivity : ComponentActivity() {
                 onSelectCity = { city ->
                   viewModel.selectCity(city)
                 },
+                onAutoDetectLocation = {
+                  viewModel.autoDetectLocation()
+                },
                 onSetBackgroundType = { bgType ->
                   viewModel.setBackgroundType(bgType)
                 },

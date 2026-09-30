@@ -230,7 +230,7 @@ fun MosqueInfoCarousel(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-              text = "\"Sholat berjamaah itu lebih utama daripada sholat sendirian sebanyak 27 derajat.\" (HR. Bukhari & Muslim)",
+              text = settings.mutiaraHadits,
               fontSize = 13.sp,
               fontWeight = FontWeight.Medium,
               color = IvoryWhite,
