@@ -1,0 +1,6 @@
+{
+  "name": "Jam Masjid Digital TV",
+  "description": "Aplikasi Jam Dinding Digital Masjid adaptif untuk HP (vertikal) dan TV (horizontal/mirroring) dengan jadwal sholat, hitung mundur iqomah, running text, dan custom background.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
