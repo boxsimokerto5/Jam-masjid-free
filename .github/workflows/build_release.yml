@@ -45,8 +45,13 @@ jobs:
             echo "Release keystore my-upload-key.jks already exists."
           fi
 
-      - name: Make gradlew Executable
-        run: chmod +x gradlew || true
+      - name: Ensure Gradle Wrapper Executable
+        run: |
+          if [ ! -f "gradlew" ]; then
+            echo "gradlew not found, generating with gradle wrapper..."
+            gradle wrapper
+          fi
+          chmod +x gradlew
 
       - name: Build Android App Bundle (AAB for Google Play Store)
         env:
