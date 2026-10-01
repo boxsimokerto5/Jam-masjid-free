@@ -29,7 +29,11 @@ import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.ElectricBolt
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
@@ -41,6 +45,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -62,7 +67,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -73,6 +80,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.MosqueSubscriber
 import com.example.data.model.MosqueSupportTicket
+import com.example.data.supabase.SupabaseConfig
 import com.example.ui.theme.CrimsonAlert
 import com.example.ui.theme.Emerald300
 import com.example.ui.theme.Emerald500
@@ -93,6 +101,7 @@ fun MosqueAdminPanelDialog(
   subscribers: List<MosqueSubscriber>,
   tickets: List<MosqueSupportTicket> = emptyList(),
   isLoading: Boolean = false,
+  supabaseConfig: SupabaseConfig? = null,
   onVerifyPin: (String) -> Boolean,
   onResetDeviceBinding: (String) -> Unit,
   onTogglePro: (String, Boolean) -> Unit,
@@ -100,9 +109,13 @@ fun MosqueAdminPanelDialog(
   onDeleteTicket: (String) -> Unit = {},
   onRefreshData: () -> Unit,
   onChangePin: (String) -> Unit,
+  onSaveSupabaseCredentials: (String, String) -> Unit = { _, _ -> },
+  onTestSupabase: ((Boolean, String) -> Unit) -> Unit = {},
+  onSyncCurrentMosqueToSupabase: ((Boolean, String) -> Unit) -> Unit = {},
   onDismiss: () -> Unit
 ) {
   val context = LocalContext.current
+  val clipboardManager = LocalClipboardManager.current
   var isAuthenticated by remember { mutableStateOf(false) }
   var pinInput by remember { mutableStateOf("") }
   var pinError by remember { mutableStateOf(false) }
@@ -111,6 +124,15 @@ fun MosqueAdminPanelDialog(
   var newPinInput by remember { mutableStateOf("") }
   var pinChangeSuccess by remember { mutableStateOf(false) }
   var selectedAdminSubTab by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+
+  // Supabase Configuration States
+  var supabaseUrlInput by remember { mutableStateOf(supabaseConfig?.supabaseUrl ?: "") }
+  var supabaseKeyInput by remember { mutableStateOf(supabaseConfig?.supabaseAnonKey ?: "") }
+  var supabaseStatusMessage by remember { mutableStateOf<String?>(null) }
+  var isSupabaseSuccess by remember { mutableStateOf(true) }
+  var isTestingSupabase by remember { mutableStateOf(false) }
+  var isSyncingSupabase by remember { mutableStateOf(false) }
+  var copySqlSuccess by remember { mutableStateOf(false) }
 
   Dialog(
     onDismissRequest = onDismiss,
@@ -374,10 +396,10 @@ fun MosqueAdminPanelDialog(
 
           Spacer(modifier = Modifier.height(8.dp))
 
-          // Sub-Tab Switcher: Masjid Pelanggan vs Tiket Kendala
+          // Sub-Tab Switcher: Masjid Pelanggan vs Tiket Kendala vs Database Supabase
           Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
           ) {
             val pendingTicketsCount = tickets.count { !it.isResolved }
             Button(
@@ -389,7 +411,7 @@ fun MosqueAdminPanelDialog(
               ),
               shape = RoundedCornerShape(8.dp)
             ) {
-              Text("🕌 Masjid (${subscribers.size})", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+              Text("🕌 Masjid (${subscribers.size})", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1)
             }
 
             Button(
@@ -402,17 +424,38 @@ fun MosqueAdminPanelDialog(
               shape = RoundedCornerShape(8.dp)
             ) {
               Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("📬 Tiket Kendala", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text("📬 Tiket", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 if (pendingTicketsCount > 0) {
-                  Spacer(modifier = Modifier.width(6.dp))
+                  Spacer(modifier = Modifier.width(4.dp))
                   Box(
                     modifier = Modifier
                       .background(CrimsonAlert, CircleShape)
-                      .padding(horizontal = 6.dp, vertical = 1.dp)
+                      .padding(horizontal = 5.dp, vertical = 1.dp)
                   ) {
-                    Text("$pendingTicketsCount", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = IvoryWhite)
+                    Text("$pendingTicketsCount", fontSize = 8.5.sp, fontWeight = FontWeight.ExtraBold, color = IvoryWhite)
                   }
                 }
+              }
+            }
+
+            Button(
+              onClick = { selectedAdminSubTab = 2 },
+              modifier = Modifier.weight(1.15f),
+              colors = ButtonDefaults.buttonColors(
+                containerColor = if (selectedAdminSubTab == 2) Gold500 else Obsidian800,
+                contentColor = if (selectedAdminSubTab == 2) Color.Black else IvoryWhite
+              ),
+              shape = RoundedCornerShape(8.dp)
+            ) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                  imageVector = if (supabaseConfig?.isConfigured == true) Icons.Default.CloudDone else Icons.Default.Cloud,
+                  contentDescription = null,
+                  tint = if (selectedAdminSubTab == 2) Color.Black else if (supabaseConfig?.isConfigured == true) Emerald300 else Gold400,
+                  modifier = Modifier.size(13.dp)
+                )
+                Spacer(modifier = Modifier.width(3.dp))
+                Text("⚡ Supabase Cloud", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1)
               }
             }
           }
@@ -460,7 +503,7 @@ fun MosqueAdminPanelDialog(
                 }
               }
             }
-          } else {
+          } else if (selectedAdminSubTab == 1) {
             // TAB 1: TIKET & LAPORAN KENDALA MASJID
             val filteredTickets = tickets.filter {
               it.mosqueName.contains(searchQuery, ignoreCase = true) ||
@@ -481,7 +524,6 @@ fun MosqueAdminPanelDialog(
                   MosqueTicketItemCard(
                     ticket = ticket,
                     onResetDevice = {
-                      // Reset matching subscriber
                       val matchedSub = subscribers.find {
                         it.mosqueName.equals(ticket.mosqueName, ignoreCase = true) ||
                         it.activeDeviceId == ticket.deviceId
@@ -502,6 +544,281 @@ fun MosqueAdminPanelDialog(
                     onToggleResolved = { onResolveTicket(ticket.id, !ticket.isResolved) },
                     onDelete = { onDeleteTicket(ticket.id) }
                   )
+                }
+              }
+            }
+          } else {
+            // TAB 2: DATABASE SUPABASE & SUPERADMIN MONITORING
+            LazyColumn(
+              modifier = Modifier.fillMaxWidth().weight(1f),
+              verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+              item {
+                // Connection Status Card
+                Card(
+                  modifier = Modifier.fillMaxWidth(),
+                  colors = CardDefaults.cardColors(containerColor = Obsidian800),
+                  shape = RoundedCornerShape(12.dp),
+                  border = BorderStroke(1.dp, if (supabaseConfig?.isConfigured == true) Emerald500.copy(alpha = 0.7f) else Color.White.copy(alpha = 0.15f))
+                ) {
+                  Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.SpaceBetween,
+                      verticalAlignment = Alignment.CenterVertically
+                    ) {
+                      Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Storage, contentDescription = null, tint = Gold400, modifier = Modifier.size(22.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                          Text("Status Koneksi Supabase", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = IvoryWhite)
+                          Text(
+                            text = if (supabaseConfig?.isConfigured == true) "Cloud Database Aktif" else "Belum Dikonfigurasi (Mode Lokal)",
+                            fontSize = 11.sp,
+                            color = if (supabaseConfig?.isConfigured == true) Emerald300 else SoftGray
+                          )
+                        }
+                      }
+
+                      Box(
+                        modifier = Modifier
+                          .background(if (supabaseConfig?.isConfigured == true) Emerald800 else Color.DarkGray, RoundedCornerShape(8.dp))
+                          .border(1.dp, if (supabaseConfig?.isConfigured == true) Emerald500 else Color.Gray, RoundedCornerShape(8.dp))
+                          .padding(horizontal = 8.dp, vertical = 3.dp)
+                      ) {
+                        Text(
+                          text = if (supabaseConfig?.isConfigured == true) "🟢 ONLINE" else "⚪ OFFLINE",
+                          fontSize = 10.sp,
+                          fontWeight = FontWeight.ExtraBold,
+                          color = if (supabaseConfig?.isConfigured == true) Emerald300 else IvoryWhite
+                        )
+                      }
+                    }
+
+                    if (supabaseStatusMessage != null) {
+                      Spacer(modifier = Modifier.height(8.dp))
+                      Box(
+                        modifier = Modifier
+                          .fillMaxWidth()
+                          .background(if (isSupabaseSuccess) Emerald900.copy(alpha = 0.7f) else CrimsonAlert.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                          .border(1.dp, if (isSupabaseSuccess) Emerald500 else CrimsonAlert, RoundedCornerShape(8.dp))
+                          .padding(8.dp)
+                      ) {
+                        Text(
+                          text = supabaseStatusMessage!!,
+                          fontSize = 11.sp,
+                          color = if (isSupabaseSuccess) Emerald300 else CrimsonAlert
+                        )
+                      }
+                    }
+                  }
+                }
+              }
+
+              item {
+                // Form Kredensial Supabase
+                Card(
+                  modifier = Modifier.fillMaxWidth(),
+                  colors = CardDefaults.cardColors(containerColor = Obsidian800),
+                  shape = RoundedCornerShape(12.dp),
+                  border = BorderStroke(1.dp, Gold400.copy(alpha = 0.3f))
+                ) {
+                  Column(modifier = Modifier.padding(14.dp)) {
+                    Text("Konfigurasi API Supabase:", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Gold400)
+                    Text("Masukkan Project URL & Anon Public Key dari dashboard Supabase Anda.", fontSize = 11.sp, color = SoftGray)
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                      value = supabaseUrlInput,
+                      onValueChange = { supabaseUrlInput = it },
+                      label = { Text("Supabase Project URL (https://xyz.supabase.co)") },
+                      singleLine = true,
+                      modifier = Modifier.fillMaxWidth(),
+                      colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Gold400,
+                        unfocusedBorderColor = Color.DarkGray,
+                        focusedTextColor = IvoryWhite,
+                        unfocusedTextColor = IvoryWhite
+                      )
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                      value = supabaseKeyInput,
+                      onValueChange = { supabaseKeyInput = it },
+                      label = { Text("Supabase Anon / Public Key (eyJhbGci...)") },
+                      singleLine = true,
+                      modifier = Modifier.fillMaxWidth(),
+                      colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Gold400,
+                        unfocusedBorderColor = Color.DarkGray,
+                        focusedTextColor = IvoryWhite,
+                        unfocusedTextColor = IvoryWhite
+                      )
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                      Button(
+                        onClick = {
+                          onSaveSupabaseCredentials(supabaseUrlInput, supabaseKeyInput)
+                          supabaseStatusMessage = "Kredensial Supabase berhasil disimpan!"
+                          isSupabaseSuccess = true
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = Gold500, contentColor = Color.Black),
+                        shape = RoundedCornerShape(8.dp)
+                      ) {
+                        Text("Simpan Kredensial", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                      }
+
+                      OutlinedButton(
+                        onClick = {
+                          isTestingSupabase = true
+                          supabaseStatusMessage = "Sedang menguji koneksi ke Supabase..."
+                          onTestSupabase { success, msg ->
+                            isTestingSupabase = false
+                            isSupabaseSuccess = success
+                            supabaseStatusMessage = msg
+                          }
+                        },
+                        modifier = Modifier.weight(1f),
+                        border = BorderStroke(1.dp, Gold400),
+                        shape = RoundedCornerShape(8.dp),
+                        enabled = !isTestingSupabase
+                      ) {
+                        if (isTestingSupabase) {
+                          CircularProgressIndicator(color = Gold400, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        } else {
+                          Icon(Icons.Default.ElectricBolt, contentDescription = null, tint = Gold400, modifier = Modifier.size(14.dp))
+                          Spacer(modifier = Modifier.width(4.dp))
+                          Text("Test Koneksi", fontSize = 11.sp, color = Gold400, fontWeight = FontWeight.Bold)
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+
+              item {
+                // Cloud Sync Actions Card
+                Card(
+                  modifier = Modifier.fillMaxWidth(),
+                  colors = CardDefaults.cardColors(containerColor = Obsidian800),
+                  shape = RoundedCornerShape(12.dp),
+                  border = BorderStroke(1.dp, Emerald500.copy(alpha = 0.4f))
+                ) {
+                  Column(modifier = Modifier.padding(14.dp)) {
+                    Text("Sinkronisasi Cloud Data Masjid:", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Emerald300)
+                    Text("Kirimkan data masjid, kas keuangan, dan pengaturan saat ini ke Supabase.", fontSize = 11.sp, color = SoftGray)
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                      Button(
+                        onClick = {
+                          isSyncingSupabase = true
+                          onSyncCurrentMosqueToSupabase { success, msg ->
+                            isSyncingSupabase = false
+                            isSupabaseSuccess = success
+                            supabaseStatusMessage = msg
+                            if (success) onRefreshData()
+                          }
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = Emerald800, contentColor = IvoryWhite),
+                        shape = RoundedCornerShape(8.dp),
+                        enabled = !isSyncingSupabase
+                      ) {
+                        if (isSyncingSupabase) {
+                          CircularProgressIndicator(color = IvoryWhite, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        } else {
+                          Icon(Icons.Default.Cloud, contentDescription = null, modifier = Modifier.size(16.dp))
+                          Spacer(modifier = Modifier.width(4.dp))
+                          Text("Sinkronkan Masjid Ini", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                      }
+
+                      OutlinedButton(
+                        onClick = onRefreshData,
+                        modifier = Modifier.weight(1f),
+                        border = BorderStroke(1.dp, Emerald500),
+                        shape = RoundedCornerShape(8.dp)
+                      ) {
+                        Icon(Icons.Default.Refresh, contentDescription = null, tint = Emerald300, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Tarik Data Cloud", fontSize = 11.sp, color = Emerald300, fontWeight = FontWeight.Bold)
+                      }
+                    }
+                  }
+                }
+              }
+
+              item {
+                // SQL Schema Setup Helper
+                Card(
+                  modifier = Modifier.fillMaxWidth(),
+                  colors = CardDefaults.cardColors(containerColor = Obsidian800),
+                  shape = RoundedCornerShape(12.dp),
+                  border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+                ) {
+                  Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.SpaceBetween,
+                      verticalAlignment = Alignment.CenterVertically
+                    ) {
+                      Column(modifier = Modifier.weight(1f)) {
+                        Text("Skrip Pembuatan Tabel Database (SQL):", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Gold400)
+                        Text("Jalankan di menu SQL Editor dashboard Supabase Anda sekali saja.", fontSize = 11.sp, color = SoftGray)
+                      }
+
+                      Button(
+                        onClick = {
+                          clipboardManager.setText(AnnotatedString(SupabaseConfig.SQL_SETUP_SCRIPT))
+                          copySqlSuccess = true
+                          supabaseStatusMessage = "✅ Skrip SQL berhasil disalin! Buka Supabase SQL Editor lalu tempel (Paste)."
+                          isSupabaseSuccess = true
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Gold500, contentColor = Color.Black),
+                        shape = RoundedCornerShape(8.dp)
+                      ) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Salin SQL", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                      }
+                    }
+
+                    if (copySqlSuccess) {
+                      Spacer(modifier = Modifier.height(6.dp))
+                      Text("✓ Skrip SQL telah tersalin ke clipboard!", fontSize = 11.sp, color = Emerald300, fontWeight = FontWeight.Bold)
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Box(
+                      modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.Black.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
+                        .padding(10.dp)
+                    ) {
+                      Text(
+                        text = "create table if not exists public.mosques (\n  id text primary key,\n  device_id text unique not null,\n  mosque_name text not null,\n  kas_saldo bigint default 0,\n  subscription_type text,\n  ...\n);\n-- Klik 'Salin SQL' di atas untuk menyalin skrip lengkap!",
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = Gold400
+                      )
+                    }
+                  }
                 }
               }
             }

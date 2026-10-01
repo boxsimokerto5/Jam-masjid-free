@@ -195,12 +195,13 @@ class MainActivity : ComponentActivity() {
             }
           }
 
-          // Super Admin Panel Dialog (Monitoring Pelanggan & Lokasi Masjid)
+          // Super Admin Panel Dialog (Monitoring Pelanggan & Lokasi Masjid & Supabase)
           if (uiState.showAdminPanelDialog) {
             MosqueAdminPanelDialog(
               subscribers = uiState.subscribersList,
               tickets = uiState.ticketsList,
               isLoading = uiState.isAdminLoading,
+              supabaseConfig = viewModel.subscriberRepository.supabaseConfig,
               onVerifyPin = { pin -> viewModel.verifyAdminPin(pin) },
               onResetDeviceBinding = { subId -> viewModel.adminResetDeviceBinding(subId) },
               onTogglePro = { subId, isPro -> viewModel.adminToggleProStatus(subId, isPro) },
@@ -210,6 +211,9 @@ class MainActivity : ComponentActivity() {
                 viewModel.refreshAdminSubscribers()
               },
               onChangePin = { newPin -> viewModel.changeAdminPin(newPin) },
+              onSaveSupabaseCredentials = { url, key -> viewModel.saveSupabaseCredentials(url, key) },
+              onTestSupabase = { onResult -> viewModel.testSupabaseConnection(onResult) },
+              onSyncCurrentMosqueToSupabase = { onResult -> viewModel.syncMosqueToSupabase(onResult) },
               onDismiss = { viewModel.setAdminPanelVisible(false) }
             )
           }

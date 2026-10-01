@@ -732,6 +732,34 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
     }
   }
 
+  fun syncMosqueToSupabase(onResult: (Boolean, String) -> Unit = { _, _ -> }) {
+    viewModelScope.launch {
+      val res = subscriberRepository.syncCurrentMosqueToSupabase(_uiState.value.settings)
+      if (res.isSuccess) {
+        onResult(true, "Data masjid dan saldo kas berhasil disinkronkan ke Supabase Cloud!")
+      } else {
+        onResult(false, res.exceptionOrNull()?.message ?: "Gagal sinkronisasi ke Supabase")
+      }
+    }
+  }
+
+  fun testSupabaseConnection(onResult: (Boolean, String) -> Unit) {
+    viewModelScope.launch {
+      val res = subscriberRepository.supabaseService.testConnection()
+      if (res.isSuccess) {
+        onResult(true, res.getOrNull() ?: "Sukses terhubung!")
+      } else {
+        onResult(false, res.exceptionOrNull()?.message ?: "Gagal terhubung ke Supabase")
+      }
+    }
+  }
+
+  fun saveSupabaseCredentials(url: String, key: String) {
+    subscriberRepository.supabaseConfig.supabaseUrl = url
+    subscriberRepository.supabaseConfig.supabaseAnonKey = key
+    refreshAdminSubscribers()
+  }
+
   override fun onCleared() {
     super.onCleared()
     pwaServer.stopServer()

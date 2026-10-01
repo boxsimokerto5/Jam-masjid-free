@@ -9,6 +9,8 @@ import android.util.Log
 import com.example.data.model.MosqueSettings
 import com.example.data.model.MosqueSubscriber
 import com.example.data.model.MosqueSupportTicket
+import com.example.data.supabase.SupabaseConfig
+import com.example.data.supabase.SupabaseService
 import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
@@ -53,6 +55,9 @@ class MosqueSubscriberRepository(private val context: Context) {
 
   private val _ticketsList = MutableStateFlow<List<MosqueSupportTicket>>(loadLocalTickets())
   val ticketsList: StateFlow<List<MosqueSupportTicket>> = _ticketsList.asStateFlow()
+
+  val supabaseConfig = SupabaseConfig(context)
+  val supabaseService = SupabaseService(supabaseConfig)
 
   @SuppressLint("HardwareIds")
   private fun getOrCreateDeviceId(): String {
@@ -135,7 +140,14 @@ class MosqueSubscriberRepository(private val context: Context) {
     // Simpan ke local cache
     saveSubscriberLocally(subscriber)
 
-    // Sinkronisasi ke Cloud Firestore
+    // Sinkronisasi ke Cloud Supabase & Firestore
+    if (supabaseConfig.isConfigured) {
+      try {
+        supabaseService.upsertMosque(subscriber, settings)
+      } catch (e: Exception) {
+        Log.w(TAG, "Supabase sync: ${e.message}")
+      }
+    }
     syncToFirestore(subscriber)
 
     return@withContext subscriber
@@ -190,9 +202,26 @@ class MosqueSubscriberRepository(private val context: Context) {
   }
 
   /**
-   * Muat data seluruh masjid pelanggan dari Cloud Firestore / Local.
+   * Muat data seluruh masjid pelanggan dari Cloud Supabase / Firestore / Local.
    */
   suspend fun fetchAllSubscribers(): List<MosqueSubscriber> = withContext(Dispatchers.IO) {
+    // 1. Coba ambil dari Supabase Database jika sudah terhubung
+    if (supabaseConfig.isConfigured) {
+      val supabaseResult = supabaseService.fetchAllMosques()
+      if (supabaseResult.isSuccess) {
+        val remoteList = supabaseResult.getOrNull()
+        if (!remoteList.isNullOrEmpty()) {
+          saveSubscribersListLocally(remoteList)
+          _subscribersList.value = remoteList
+          Log.d(TAG, "Berhasil memuat ${remoteList.size} masjid dari Supabase.")
+          return@withContext remoteList
+        }
+      } else {
+        Log.w(TAG, "Gagal fetch dari Supabase: ${supabaseResult.exceptionOrNull()?.message}")
+      }
+    }
+
+    // 2. Coba ambil dari Firestore jika aktif
     try {
       if (FirebaseApp.getApps(context).isNotEmpty()) {
         val db = FirebaseFirestore.getInstance()
@@ -250,6 +279,12 @@ class MosqueSubscriberRepository(private val context: Context) {
       _subscribersList.value = current
 
       try {
+        if (supabaseConfig.isConfigured) {
+          supabaseService.resetDeviceBinding(subscriberId)
+        }
+      } catch (_: Exception) {}
+
+      try {
         if (FirebaseApp.getApps(context).isNotEmpty()) {
           FirebaseFirestore.getInstance().collection(FIRESTORE_COLLECTION)
             .document(subscriberId)
@@ -276,6 +311,14 @@ class MosqueSubscriberRepository(private val context: Context) {
       _subscribersList.value = current
 
       try {
+        if (supabaseConfig.isConfigured) {
+          val expiry = if (isPro) "31 Des 2027, 23:59 WIB" else "Kedaluwarsa"
+          val type = if (isPro) "PRO Admin Supabase" else "Free"
+          supabaseService.updateSubscription(updated.activeDeviceId, isPro, expiry, type)
+        }
+      } catch (_: Exception) {}
+
+      try {
         if (FirebaseApp.getApps(context).isNotEmpty()) {
           FirebaseFirestore.getInstance().collection(FIRESTORE_COLLECTION)
             .document(subscriberId)
@@ -287,6 +330,31 @@ class MosqueSubscriberRepository(private val context: Context) {
       return@withContext true
     }
     return@withContext false
+  }
+
+  /**
+   * Mengirim data masjid ini ke Supabase secara langsung (Manual / Auto Sync)
+   */
+  suspend fun syncCurrentMosqueToSupabase(settings: MosqueSettings): Result<Boolean> = withContext(Dispatchers.IO) {
+    val existingId = prefs.getString(KEY_CURRENT_MOSQUE_ID, null) ?: "MOSQUE-${settings.cityName.uppercase().replace(" ", "_")}-${deviceId.takeLast(6)}"
+    val subscriber = MosqueSubscriber(
+      id = existingId,
+      mosqueName = settings.mosqueName,
+      cityName = settings.cityName,
+      mosqueAddress = settings.mosqueAddress,
+      latitude = settings.latitude,
+      longitude = settings.longitude,
+      activeDeviceId = deviceId,
+      deviceModel = deviceModel,
+      isPro = true,
+      subscriptionType = "Supabase Sync",
+      registeredDate = "Terdaftar",
+      expiryDate = "Aktif",
+      lastActiveDate = "Hari Ini",
+      orderId = "CLD-${System.currentTimeMillis()}"
+    )
+    saveSubscriberLocally(subscriber)
+    return@withContext supabaseService.upsertMosque(subscriber, settings)
   }
 
   private fun saveSubscriberLocally(subscriber: MosqueSubscriber) {

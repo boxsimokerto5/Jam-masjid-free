@@ -1791,7 +1791,7 @@ fun MosqueMobilePortraitScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                  text = "Fitur khusus bagi Anda sebagai pemilik aplikasi untuk:\n• Melihat daftar seluruh masjid di Indonesia yang berlangganan Rp 10.000/bln.\n• Melihat titik koordinat GPS masjid langsung di Google Maps.\n• Mereset ikatan perangkat jika pengurus masjid ganti HP/TV baru.\n• Mengaktifkan/menonaktifkan status langganan secara manual.",
+                  text = "Fitur khusus bagi Anda sebagai pemilik/Superadmin aplikasi untuk:\n• Menghubungkan Cloud Database Supabase untuk pemantauan terpusat.\n• Memantau seluruh masjid di Indonesia yang berlangganan.\n• Melihat titik koordinat GPS & laporan kas keuangan masjid.\n• Mereset ikatan perangkat jika pengurus masjid ganti TV/HP baru.\n• Mengaktifkan/menonaktifkan status langganan PRO secara fleksibel.",
                   fontSize = 11.sp,
                   color = IvoryWhite,
                   lineHeight = 16.sp
