@@ -60,6 +60,8 @@ fun MosqueAccountDialog(
   deviceId: String,
   deviceModel: String,
   onOpenSubscription: () -> Unit,
+  onOpenPrivacyPolicy: () -> Unit = {},
+  onOpenReportIssue: () -> Unit = {},
   onDismiss: () -> Unit
 ) {
   Dialog(onDismissRequest = onDismiss) {
@@ -196,7 +198,39 @@ fun MosqueAccountDialog(
           }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Helpdesk & Privacy links
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          OutlinedButton(
+            onClick = {
+              onDismiss()
+              onOpenReportIssue()
+            },
+            modifier = Modifier.weight(1f),
+            border = BorderStroke(1.dp, Emerald500.copy(alpha = 0.6f)),
+            shape = RoundedCornerShape(8.dp)
+          ) {
+            Text("Lapor Kendala", fontSize = 11.sp, color = Emerald300, fontWeight = FontWeight.Bold)
+          }
+
+          OutlinedButton(
+            onClick = {
+              onDismiss()
+              onOpenPrivacyPolicy()
+            },
+            modifier = Modifier.weight(1f),
+            border = BorderStroke(1.dp, Gold400.copy(alpha = 0.6f)),
+            shape = RoundedCornerShape(8.dp)
+          ) {
+            Text("Kebijakan Privasi", fontSize = 11.sp, color = Gold400, fontWeight = FontWeight.Bold)
+          }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         Button(
           onClick = onDismiss,

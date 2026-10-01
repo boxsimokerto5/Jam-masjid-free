@@ -8,6 +8,7 @@ import android.provider.Settings
 import android.util.Log
 import com.example.data.model.MosqueSettings
 import com.example.data.model.MosqueSubscriber
+import com.example.data.model.MosqueSupportTicket
 import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
@@ -38,12 +39,17 @@ class MosqueSubscriberRepository(private val context: Context) {
     private const val KEY_LOCAL_SUBSCRIBERS_JSON = "local_subscribers_json"
     private const val KEY_CURRENT_MOSQUE_ID = "current_registered_mosque_id"
     private const val FIRESTORE_COLLECTION = "mosque_subscribers"
+    private const val KEY_LOCAL_TICKETS_JSON = "local_tickets_json"
+    private const val FIRESTORE_TICKETS_COLLECTION = "mosque_support_tickets"
   }
 
   private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
   private val _subscribersList = MutableStateFlow<List<MosqueSubscriber>>(loadLocalSubscribers())
   val subscribersList: StateFlow<List<MosqueSubscriber>> = _subscribersList.asStateFlow()
+
+  private val _ticketsList = MutableStateFlow<List<MosqueSupportTicket>>(loadLocalTickets())
+  val ticketsList: StateFlow<List<MosqueSupportTicket>> = _ticketsList.asStateFlow()
 
   val deviceId: String by lazy { getOrCreateDeviceId() }
   val deviceModel: String by lazy { "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL}" }
@@ -369,6 +375,207 @@ class MosqueSubscriberRepository(private val context: Context) {
             expiryDate = obj.optString("expiryDate", ""),
             lastActiveDate = obj.optString("lastActiveDate", ""),
             orderId = obj.optString("orderId", "")
+          )
+        )
+      }
+    } catch (_: Exception) {}
+    return list
+  }
+
+  /**
+   * Menyerahkan tiket laporan kendala dari masjid ke database Admin
+   */
+  suspend fun submitSupportTicket(
+    mosqueName: String,
+    cityName: String,
+    senderContact: String,
+    category: String,
+    message: String
+  ): MosqueSupportTicket = withContext(Dispatchers.IO) {
+    val now = Calendar.getInstance()
+    val dateFmt = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID"))
+    val createdAt = dateFmt.format(now.time) + " WIB"
+    val ticketId = "TCK-${System.currentTimeMillis()}"
+
+    val ticket = MosqueSupportTicket(
+      id = ticketId,
+      mosqueName = mosqueName,
+      cityName = cityName,
+      senderContact = senderContact,
+      category = category,
+      issueMessage = message,
+      deviceId = deviceId,
+      deviceModel = deviceModel,
+      createdAt = createdAt,
+      isResolved = false
+    )
+
+    val currentList = loadLocalTickets().toMutableList()
+    currentList.add(0, ticket)
+    saveTicketsLocally(currentList)
+    _ticketsList.value = currentList
+
+    try {
+      if (FirebaseApp.getApps(context).isNotEmpty()) {
+        val db = FirebaseFirestore.getInstance()
+        val dataMap = hashMapOf(
+          "id" to ticket.id,
+          "mosqueName" to ticket.mosqueName,
+          "cityName" to ticket.cityName,
+          "senderContact" to ticket.senderContact,
+          "category" to ticket.category,
+          "issueMessage" to ticket.issueMessage,
+          "deviceId" to ticket.deviceId,
+          "deviceModel" to ticket.deviceModel,
+          "createdAt" to ticket.createdAt,
+          "isResolved" to ticket.isResolved
+        )
+        db.collection(FIRESTORE_TICKETS_COLLECTION)
+          .document(ticket.id)
+          .set(dataMap)
+          .await()
+      }
+    } catch (e: Exception) {
+      Log.w(TAG, "Sync ticket note: ${e.message}")
+    }
+
+    return@withContext ticket
+  }
+
+  suspend fun fetchSupportTickets(): List<MosqueSupportTicket> = withContext(Dispatchers.IO) {
+    try {
+      if (FirebaseApp.getApps(context).isNotEmpty()) {
+        val db = FirebaseFirestore.getInstance()
+        val snapshot = db.collection(FIRESTORE_TICKETS_COLLECTION).get().await()
+        val list = mutableListOf<MosqueSupportTicket>()
+        for (doc in snapshot.documents) {
+          list.add(
+            MosqueSupportTicket(
+              id = doc.getString("id") ?: doc.id,
+              mosqueName = doc.getString("mosqueName") ?: "",
+              cityName = doc.getString("cityName") ?: "",
+              senderContact = doc.getString("senderContact") ?: "",
+              category = doc.getString("category") ?: "Kendala",
+              issueMessage = doc.getString("issueMessage") ?: "",
+              deviceId = doc.getString("deviceId") ?: "",
+              deviceModel = doc.getString("deviceModel") ?: "",
+              createdAt = doc.getString("createdAt") ?: "",
+              isResolved = doc.getBoolean("isResolved") ?: false
+            )
+          )
+        }
+        if (list.isNotEmpty()) {
+          saveTicketsLocally(list)
+          _ticketsList.value = list
+          return@withContext list
+        }
+      }
+    } catch (_: Exception) {}
+
+    val local = loadLocalTickets()
+    _ticketsList.value = local
+    return@withContext local
+  }
+
+  suspend fun resolveSupportTicket(ticketId: String, isResolved: Boolean = true): Boolean = withContext(Dispatchers.IO) {
+    val current = _ticketsList.value.toMutableList()
+    val idx = current.indexOfFirst { it.id == ticketId }
+    if (idx >= 0) {
+      current[idx] = current[idx].copy(isResolved = isResolved)
+      saveTicketsLocally(current)
+      _ticketsList.value = current
+
+      try {
+        if (FirebaseApp.getApps(context).isNotEmpty()) {
+          FirebaseFirestore.getInstance().collection(FIRESTORE_TICKETS_COLLECTION)
+            .document(ticketId)
+            .update("isResolved", isResolved)
+            .await()
+        }
+      } catch (_: Exception) {}
+      return@withContext true
+    }
+    return@withContext false
+  }
+
+  suspend fun deleteSupportTicket(ticketId: String): Boolean = withContext(Dispatchers.IO) {
+    val current = _ticketsList.value.toMutableList()
+    val removed = current.removeAll { it.id == ticketId }
+    if (removed) {
+      saveTicketsLocally(current)
+      _ticketsList.value = current
+
+      try {
+        if (FirebaseApp.getApps(context).isNotEmpty()) {
+          FirebaseFirestore.getInstance().collection(FIRESTORE_TICKETS_COLLECTION)
+            .document(ticketId)
+            .delete()
+            .await()
+        }
+      } catch (_: Exception) {}
+      return@withContext true
+    }
+    return@withContext false
+  }
+
+  private fun saveTicketsLocally(list: List<MosqueSupportTicket>) {
+    try {
+      val array = JSONArray()
+      for (t in list) {
+        val obj = JSONObject().apply {
+          put("id", t.id)
+          put("mosqueName", t.mosqueName)
+          put("cityName", t.cityName)
+          put("senderContact", t.senderContact)
+          put("category", t.category)
+          put("issueMessage", t.issueMessage)
+          put("deviceId", t.deviceId)
+          put("deviceModel", t.deviceModel)
+          put("createdAt", t.createdAt)
+          put("isResolved", t.isResolved)
+        }
+        array.put(obj)
+      }
+      prefs.edit().putString(KEY_LOCAL_TICKETS_JSON, array.toString()).apply()
+    } catch (_: Exception) {}
+  }
+
+  private fun loadLocalTickets(): List<MosqueSupportTicket> {
+    val raw = prefs.getString(KEY_LOCAL_TICKETS_JSON, null)
+    if (raw.isNullOrBlank()) {
+      return listOf(
+        MosqueSupportTicket(
+          id = "TCK-DEMO-001",
+          mosqueName = "Masjid Agung Al-Kautsar",
+          cityName = "Kediri",
+          senderContact = "0812-3456-7890",
+          category = "🔄 Reset Kunci Perangkat (Ganti TV / HP Baru)",
+          issueMessage = "Assalamu'alaikum Admin, kami baru memasang TV Smart Android baru di masjid. Mohon bantu reset kunci perangkat agar bisa login di TV baru.",
+          deviceId = deviceId,
+          deviceModel = deviceModel,
+          createdAt = "01 Okt 2026, 10:15 WIB",
+          isResolved = false
+        )
+      )
+    }
+
+    val list = mutableListOf<MosqueSupportTicket>()
+    try {
+      val array = JSONArray(raw)
+      for (i in 0 until array.length()) {
+        val obj = array.getJSONObject(i)
+        list.add(
+          MosqueSupportTicket(
+            id = obj.optString("id", ""),
+            mosqueName = obj.optString("mosqueName", ""),
+            cityName = obj.optString("cityName", ""),
+            senderContact = obj.optString("senderContact", ""),
+            category = obj.optString("category", ""),
+            issueMessage = obj.optString("issueMessage", ""),
+            deviceId = obj.optString("deviceId", ""),
+            deviceModel = obj.optString("deviceModel", ""),
+            createdAt = obj.optString("createdAt", ""),
+            isResolved = obj.optBoolean("isResolved", false)
           )
         )
       }

@@ -140,6 +140,8 @@ fun MosqueMobilePortraitScreen(
   onTestSholatMode: (Int) -> Unit,
   onOpenAdminPanel: () -> Unit = {},
   onOpenAccountDialog: () -> Unit = {},
+  onOpenPrivacyPolicy: () -> Unit = {},
+  onOpenReportIssue: () -> Unit = {},
   modifier: Modifier = Modifier
 ) {
   var selectedTab by remember { mutableIntStateOf(0) }
@@ -1683,15 +1685,70 @@ fun MosqueMobilePortraitScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                OutlinedButton(
-                  onClick = onOpenAccountDialog,
+                Row(
                   modifier = Modifier.fillMaxWidth(),
-                  border = BorderStroke(1.dp, Gold400),
-                  colors = ButtonDefaults.outlinedButtonColors(contentColor = Gold400)
+                  horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                  Icon(Icons.Default.VpnKey, contentDescription = null, modifier = Modifier.size(16.dp))
-                  Spacer(modifier = Modifier.width(8.dp))
-                  Text("Lihat Status Lisensi Perangkat", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                  OutlinedButton(
+                    onClick = onOpenAccountDialog,
+                    modifier = Modifier.weight(1f),
+                    border = BorderStroke(1.dp, Gold400),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Gold400)
+                  ) {
+                    Icon(Icons.Default.VpnKey, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Lisensi Layar", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                  }
+
+                  Button(
+                    onClick = onOpenReportIssue,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = Emerald800, contentColor = IvoryWhite)
+                  ) {
+                    Text("Lapor Kendala", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                  }
+                }
+              }
+            }
+          }
+
+          // Card Bantuan & Kebijakan Privasi
+          item {
+            Card(
+              modifier = Modifier.fillMaxWidth(),
+              colors = CardDefaults.cardColors(containerColor = Obsidian800),
+              shape = RoundedCornerShape(14.dp),
+              border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f))
+            ) {
+              Column(modifier = Modifier.padding(14.dp)) {
+                Text("Bantuan & Kebijakan Aplikasi:", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = IvoryWhite)
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                  text = "Perlu bantuan reset perangkat, kendala jadwal sholat, atau ingin membaca transparansi penggunaan data lokasi GPS & perangkat?",
+                  fontSize = 11.sp,
+                  color = SoftGray,
+                  lineHeight = 15.sp
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                  OutlinedButton(
+                    onClick = onOpenReportIssue,
+                    modifier = Modifier.weight(1f),
+                    border = BorderStroke(1.dp, Emerald500.copy(alpha = 0.7f))
+                  ) {
+                    Text("Pusat Bantuan", fontSize = 11.sp, color = Emerald300, fontWeight = FontWeight.Bold)
+                  }
+
+                  OutlinedButton(
+                    onClick = onOpenPrivacyPolicy,
+                    modifier = Modifier.weight(1f),
+                    border = BorderStroke(1.dp, Gold400.copy(alpha = 0.7f))
+                  ) {
+                    Text("Kebijakan Privasi", fontSize = 11.sp, color = Gold400, fontWeight = FontWeight.Bold)
+                  }
                 }
               }
             }

@@ -31,6 +31,8 @@ import com.example.ui.dialogs.CastGuideDialog
 import com.example.ui.dialogs.MosqueAccountDialog
 import com.example.ui.dialogs.MosqueAdminPanelDialog
 import com.example.ui.dialogs.MosqueSubscriptionDialog
+import com.example.ui.dialogs.PrivacyPolicyDialog
+import com.example.ui.dialogs.ReportIssueDialog
 import com.example.ui.screens.MosqueMobilePortraitScreen
 import com.example.ui.screens.MosqueTvLandscapeScreen
 import com.example.ui.theme.MosqueClockTheme
@@ -173,6 +175,12 @@ class MainActivity : ComponentActivity() {
                 onOpenAccountDialog = {
                   viewModel.setMosqueAccountDialogVisible(true)
                 },
+                onOpenPrivacyPolicy = {
+                  viewModel.setPrivacyPolicyDialogVisible(true)
+                },
+                onOpenReportIssue = {
+                  viewModel.setReportIssueDialogVisible(true)
+                },
                 modifier = Modifier.fillMaxSize()
               )
             }
@@ -182,11 +190,16 @@ class MainActivity : ComponentActivity() {
           if (uiState.showAdminPanelDialog) {
             MosqueAdminPanelDialog(
               subscribers = uiState.subscribersList,
+              tickets = uiState.ticketsList,
               isLoading = uiState.isAdminLoading,
               onVerifyPin = { pin -> viewModel.verifyAdminPin(pin) },
               onResetDeviceBinding = { subId -> viewModel.adminResetDeviceBinding(subId) },
               onTogglePro = { subId, isPro -> viewModel.adminToggleProStatus(subId, isPro) },
-              onRefreshData = { viewModel.refreshAdminSubscribers() },
+              onResolveTicket = { ticketId, isRes -> viewModel.resolveSupportTicket(ticketId, isRes) },
+              onDeleteTicket = { ticketId -> viewModel.deleteSupportTicket(ticketId) },
+              onRefreshData = {
+                viewModel.refreshAdminSubscribers()
+              },
               onChangePin = { newPin -> viewModel.changeAdminPin(newPin) },
               onDismiss = { viewModel.setAdminPanelVisible(false) }
             )
@@ -202,8 +215,38 @@ class MainActivity : ComponentActivity() {
               onOpenSubscription = {
                 viewModel.setSubscriptionDialogVisible(true)
               },
+              onOpenPrivacyPolicy = {
+                viewModel.setPrivacyPolicyDialogVisible(true)
+              },
+              onOpenReportIssue = {
+                viewModel.setReportIssueDialogVisible(true)
+              },
               onDismiss = {
                 viewModel.setMosqueAccountDialogVisible(false)
+              }
+            )
+          }
+
+          // Kebijakan Privasi Dialog (Google Play Privacy Policy)
+          if (uiState.showPrivacyPolicyDialog) {
+            PrivacyPolicyDialog(
+              onDismiss = {
+                viewModel.setPrivacyPolicyDialogVisible(false)
+              }
+            )
+          }
+
+          // Pusat Bantuan & Lapor Kendala Dialog (Masuk ke Super Admin)
+          if (uiState.showReportIssueDialog) {
+            ReportIssueDialog(
+              settings = uiState.settings,
+              deviceId = uiState.currentDeviceId,
+              deviceModel = uiState.currentDeviceModel,
+              onSubmitTicket = { category, contact, message ->
+                viewModel.submitSupportTicket(category, contact, message)
+              },
+              onDismiss = {
+                viewModel.setReportIssueDialogVisible(false)
               }
             )
           }

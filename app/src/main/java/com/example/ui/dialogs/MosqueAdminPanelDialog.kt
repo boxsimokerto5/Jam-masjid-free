@@ -72,6 +72,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.MosqueSubscriber
+import com.example.data.model.MosqueSupportTicket
 import com.example.ui.theme.CrimsonAlert
 import com.example.ui.theme.Emerald300
 import com.example.ui.theme.Emerald500
@@ -90,10 +91,13 @@ import java.util.Locale
 @Composable
 fun MosqueAdminPanelDialog(
   subscribers: List<MosqueSubscriber>,
+  tickets: List<MosqueSupportTicket> = emptyList(),
   isLoading: Boolean = false,
   onVerifyPin: (String) -> Boolean,
   onResetDeviceBinding: (String) -> Unit,
   onTogglePro: (String, Boolean) -> Unit,
+  onResolveTicket: (String, Boolean) -> Unit = { _, _ -> },
+  onDeleteTicket: (String) -> Unit = {},
   onRefreshData: () -> Unit,
   onChangePin: (String) -> Unit,
   onDismiss: () -> Unit
@@ -106,6 +110,7 @@ fun MosqueAdminPanelDialog(
   var showPinSettings by remember { mutableStateOf(false) }
   var newPinInput by remember { mutableStateOf("") }
   var pinChangeSuccess by remember { mutableStateOf(false) }
+  var selectedAdminSubTab by remember { androidx.compose.runtime.mutableIntStateOf(0) }
 
   Dialog(
     onDismissRequest = onDismiss,
@@ -367,43 +372,137 @@ fun MosqueAdminPanelDialog(
 
           Spacer(modifier = Modifier.height(8.dp))
 
-          // Mosque List
-          val filteredList = subscribers.filter {
-            it.mosqueName.contains(searchQuery, ignoreCase = true) ||
-            it.cityName.contains(searchQuery, ignoreCase = true) ||
-            it.mosqueAddress.contains(searchQuery, ignoreCase = true)
+          Spacer(modifier = Modifier.height(8.dp))
+
+          // Sub-Tab Switcher: Masjid Pelanggan vs Tiket Kendala
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+          ) {
+            val pendingTicketsCount = tickets.count { !it.isResolved }
+            Button(
+              onClick = { selectedAdminSubTab = 0 },
+              modifier = Modifier.weight(1f),
+              colors = ButtonDefaults.buttonColors(
+                containerColor = if (selectedAdminSubTab == 0) Gold500 else Obsidian800,
+                contentColor = if (selectedAdminSubTab == 0) Color.Black else IvoryWhite
+              ),
+              shape = RoundedCornerShape(8.dp)
+            ) {
+              Text("🕌 Masjid (${subscribers.size})", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+
+            Button(
+              onClick = { selectedAdminSubTab = 1 },
+              modifier = Modifier.weight(1f),
+              colors = ButtonDefaults.buttonColors(
+                containerColor = if (selectedAdminSubTab == 1) Gold500 else Obsidian800,
+                contentColor = if (selectedAdminSubTab == 1) Color.Black else IvoryWhite
+              ),
+              shape = RoundedCornerShape(8.dp)
+            ) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("📬 Tiket Kendala", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                if (pendingTicketsCount > 0) {
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Box(
+                    modifier = Modifier
+                      .background(CrimsonAlert, CircleShape)
+                      .padding(horizontal = 6.dp, vertical = 1.dp)
+                  ) {
+                    Text("$pendingTicketsCount", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = IvoryWhite)
+                  }
+                }
+              }
+            }
           }
 
-          if (isLoading) {
-            Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-              CircularProgressIndicator(color = Gold400)
+          Spacer(modifier = Modifier.height(8.dp))
+
+          if (selectedAdminSubTab == 0) {
+            // TAB 0: DAFTAR MASJID PELANGGAN
+            val filteredList = subscribers.filter {
+              it.mosqueName.contains(searchQuery, ignoreCase = true) ||
+              it.cityName.contains(searchQuery, ignoreCase = true) ||
+              it.mosqueAddress.contains(searchQuery, ignoreCase = true)
             }
-          } else if (filteredList.isEmpty()) {
-            Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-              Text("Belum ada data masjid yang cocok.", color = SoftGray, fontSize = 13.sp)
+
+            if (isLoading) {
+              Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Gold400)
+              }
+            } else if (filteredList.isEmpty()) {
+              Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                Text("Belum ada data masjid yang cocok.", color = SoftGray, fontSize = 13.sp)
+              }
+            } else {
+              LazyColumn(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+              ) {
+                items(filteredList) { mosque ->
+                  MosqueSubscriberItemCard(
+                    mosque = mosque,
+                    onOpenGoogleMaps = {
+                      val uri = Uri.parse("geo:${mosque.latitude},${mosque.longitude}?q=${mosque.latitude},${mosque.longitude}(${Uri.encode(mosque.mosqueName)})")
+                      val mapIntent = Intent(Intent.ACTION_VIEW, uri).apply {
+                        setPackage("com.google.android.apps.maps")
+                      }
+                      try {
+                        context.startActivity(mapIntent)
+                      } catch (_: Exception) {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                      }
+                    },
+                    onResetDevice = { onResetDeviceBinding(mosque.id) },
+                    onTogglePro = { isPro -> onTogglePro(mosque.id, isPro) }
+                  )
+                }
+              }
             }
           } else {
-            LazyColumn(
-              modifier = Modifier.fillMaxWidth().weight(1f),
-              verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-              items(filteredList) { mosque ->
-                MosqueSubscriberItemCard(
-                  mosque = mosque,
-                  onOpenGoogleMaps = {
-                    val uri = Uri.parse("geo:${mosque.latitude},${mosque.longitude}?q=${mosque.latitude},${mosque.longitude}(${Uri.encode(mosque.mosqueName)})")
-                    val mapIntent = Intent(Intent.ACTION_VIEW, uri).apply {
-                      setPackage("com.google.android.apps.maps")
-                    }
-                    try {
-                      context.startActivity(mapIntent)
-                    } catch (_: Exception) {
-                      context.startActivity(Intent(Intent.ACTION_VIEW, uri))
-                    }
-                  },
-                  onResetDevice = { onResetDeviceBinding(mosque.id) },
-                  onTogglePro = { isPro -> onTogglePro(mosque.id, isPro) }
-                )
+            // TAB 1: TIKET & LAPORAN KENDALA MASJID
+            val filteredTickets = tickets.filter {
+              it.mosqueName.contains(searchQuery, ignoreCase = true) ||
+              it.cityName.contains(searchQuery, ignoreCase = true) ||
+              it.issueMessage.contains(searchQuery, ignoreCase = true)
+            }
+
+            if (filteredTickets.isEmpty()) {
+              Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                Text("Tidak ada tiket kendala masuk.", color = SoftGray, fontSize = 13.sp)
+              }
+            } else {
+              LazyColumn(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+              ) {
+                items(filteredTickets) { ticket ->
+                  MosqueTicketItemCard(
+                    ticket = ticket,
+                    onResetDevice = {
+                      // Reset matching subscriber
+                      val matchedSub = subscribers.find {
+                        it.mosqueName.equals(ticket.mosqueName, ignoreCase = true) ||
+                        it.activeDeviceId == ticket.deviceId
+                      }
+                      if (matchedSub != null) {
+                        onResetDeviceBinding(matchedSub.id)
+                      }
+                    },
+                    onChatWhatsApp = {
+                      val cleanPhone = ticket.senderContact.replace(Regex("[^0-9]"), "")
+                      val phoneFormatted = if (cleanPhone.startsWith("0")) "62" + cleanPhone.drop(1) else cleanPhone
+                      val waText = "Assalamu'alaikum Pengurus ${Uri.encode(ticket.mosqueName)} (${Uri.encode(ticket.cityName)}). Kami dari Admin Jam Masjid Digital menindaklanjuti permohonan Anda: ${Uri.encode(ticket.category)}."
+                      val waUri = Uri.parse("https://api.whatsapp.com/send?phone=$phoneFormatted&text=$waText")
+                      try {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, waUri))
+                      } catch (_: Exception) {}
+                    },
+                    onToggleResolved = { onResolveTicket(ticket.id, !ticket.isResolved) },
+                    onDelete = { onDeleteTicket(ticket.id) }
+                  )
+                }
               }
             }
           }
@@ -600,6 +699,140 @@ private fun MosqueSubscriberItemCard(
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold
           )
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun MosqueTicketItemCard(
+  ticket: MosqueSupportTicket,
+  onResetDevice: () -> Unit,
+  onChatWhatsApp: () -> Unit,
+  onToggleResolved: () -> Unit,
+  onDelete: () -> Unit
+) {
+  Card(
+    modifier = Modifier.fillMaxWidth(),
+    colors = CardDefaults.cardColors(containerColor = Obsidian800),
+    shape = RoundedCornerShape(12.dp),
+    border = BorderStroke(1.dp, if (!ticket.isResolved) Gold400.copy(alpha = 0.7f) else Color.White.copy(alpha = 0.1f))
+  ) {
+    Column(modifier = Modifier.padding(12.dp)) {
+      // Header: Mosque & Category
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Column(modifier = Modifier.weight(1f)) {
+          Text(ticket.mosqueName.ifBlank { "Masjid" }, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = IvoryWhite)
+          Text("${ticket.cityName} • ${ticket.createdAt}", fontSize = 10.sp, color = SoftGray)
+        }
+
+        Box(
+          modifier = Modifier
+            .background(if (!ticket.isResolved) Gold500 else Emerald800, RoundedCornerShape(6.dp))
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+        ) {
+          Text(
+            text = if (!ticket.isResolved) "PERLU RESPON" else "SELESAI",
+            fontSize = 9.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = if (!ticket.isResolved) Color.Black else IvoryWhite
+          )
+        }
+      }
+
+      Spacer(modifier = Modifier.height(6.dp))
+
+      // Category badge
+      Text(
+        text = "📌 ${ticket.category}",
+        fontSize = 11.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = Emerald300
+      )
+
+      Spacer(modifier = Modifier.height(6.dp))
+
+      // Issue message box
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+          .padding(8.dp)
+      ) {
+        Text(
+          text = ticket.issueMessage,
+          fontSize = 11.sp,
+          color = IvoryWhite,
+          lineHeight = 15.sp
+        )
+      }
+
+      Spacer(modifier = Modifier.height(6.dp))
+
+      // Hardware Device Info
+      Text(
+        text = "Perangkat: ${ticket.deviceModel} (ID: ${ticket.deviceId.take(14)}...)",
+        fontSize = 10.sp,
+        fontFamily = FontFamily.Monospace,
+        color = SoftGray
+      )
+
+      if (ticket.senderContact.isNotBlank()) {
+        Text(
+          text = "Kontak: ${ticket.senderContact}",
+          fontSize = 11.sp,
+          fontWeight = FontWeight.Bold,
+          color = Gold400
+        )
+      }
+
+      Spacer(modifier = Modifier.height(10.dp))
+
+      // Action buttons
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+      ) {
+        // Reset Device if requested
+        if (ticket.category.contains("Reset", ignoreCase = true)) {
+          OutlinedButton(
+            onClick = onResetDevice,
+            modifier = Modifier.weight(1.2f),
+            border = BorderStroke(1.dp, Gold400),
+            shape = RoundedCornerShape(8.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp, horizontal = 4.dp)
+          ) {
+            Text("🔄 Reset Kunci", fontSize = 10.sp, color = Gold400, fontWeight = FontWeight.Bold)
+          }
+        }
+
+        // WhatsApp Chat
+        if (ticket.senderContact.isNotBlank()) {
+          Button(
+            onClick = onChatWhatsApp,
+            modifier = Modifier.weight(1f),
+            colors = ButtonDefaults.buttonColors(containerColor = Emerald500, contentColor = Color.Black),
+            shape = RoundedCornerShape(8.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp, horizontal = 4.dp)
+          ) {
+            Text("💬 Balas WA", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+          }
+        }
+
+        // Resolve Toggle
+        OutlinedButton(
+          onClick = onToggleResolved,
+          modifier = Modifier.weight(1f),
+          border = BorderStroke(0.8.dp, if (ticket.isResolved) SoftGray else Emerald500),
+          shape = RoundedCornerShape(8.dp),
+          contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp, horizontal = 4.dp)
+        ) {
+          Text(if (ticket.isResolved) "Buka Lagi" else "✅ Selesai", fontSize = 10.sp, color = if (ticket.isResolved) SoftGray else Emerald300)
         }
       }
     }

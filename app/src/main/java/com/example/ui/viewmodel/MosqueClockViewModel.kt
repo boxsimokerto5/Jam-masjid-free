@@ -25,6 +25,7 @@ import java.util.Calendar
 import java.util.Locale
 import com.example.data.billing.MosqueBillingManager
 import com.example.data.model.MosqueSubscriber
+import com.example.data.model.MosqueSupportTicket
 import com.example.data.prayer.OnlinePrayerService
 import com.example.data.repository.MosqueSubscriberRepository
 import com.example.server.MosqueLocalPwaServer
@@ -58,7 +59,10 @@ data class MosqueUiState(
   val isOnlineDataActive: Boolean = false,
   val showAdminPanelDialog: Boolean = false,
   val showMosqueAccountDialog: Boolean = false,
+  val showPrivacyPolicyDialog: Boolean = false,
+  val showReportIssueDialog: Boolean = false,
   val subscribersList: List<MosqueSubscriber> = emptyList(),
+  val ticketsList: List<MosqueSupportTicket> = emptyList(),
   val isAdminLoading: Boolean = false,
   val currentDeviceId: String = "",
   val currentDeviceModel: String = ""
@@ -102,9 +106,17 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
       }
     }
 
-    // Load initial subscriber database
+    // Observe support tickets
+    viewModelScope.launch {
+      subscriberRepository.ticketsList.collect { list ->
+        _uiState.update { it.copy(ticketsList = list) }
+      }
+    }
+
+    // Load initial subscriber database & tickets
     viewModelScope.launch {
       subscriberRepository.fetchAllSubscribers()
+      subscriberRepository.fetchSupportTickets()
     }
 
     // Observe settings changes
@@ -628,7 +640,8 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
     viewModelScope.launch {
       _uiState.update { it.copy(isAdminLoading = true) }
       val list = subscriberRepository.fetchAllSubscribers()
-      _uiState.update { it.copy(subscribersList = list, isAdminLoading = false) }
+      val tickets = subscriberRepository.fetchSupportTickets()
+      _uiState.update { it.copy(subscribersList = list, ticketsList = tickets, isAdminLoading = false) }
     }
   }
 
@@ -643,6 +656,38 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
     viewModelScope.launch {
       subscriberRepository.toggleProStatus(subscriberId, isPro)
       refreshAdminSubscribers()
+    }
+  }
+
+  fun setPrivacyPolicyDialogVisible(visible: Boolean) {
+    _uiState.update { it.copy(showPrivacyPolicyDialog = visible) }
+  }
+
+  fun setReportIssueDialogVisible(visible: Boolean) {
+    _uiState.update { it.copy(showReportIssueDialog = visible) }
+  }
+
+  fun submitSupportTicket(category: String, contact: String, message: String) {
+    viewModelScope.launch {
+      subscriberRepository.submitSupportTicket(
+        mosqueName = _uiState.value.settings.mosqueName,
+        cityName = _uiState.value.settings.cityName,
+        senderContact = contact,
+        category = category,
+        message = message
+      )
+    }
+  }
+
+  fun resolveSupportTicket(ticketId: String, isResolved: Boolean) {
+    viewModelScope.launch {
+      subscriberRepository.resolveSupportTicket(ticketId, isResolved)
+    }
+  }
+
+  fun deleteSupportTicket(ticketId: String) {
+    viewModelScope.launch {
+      subscriberRepository.deleteSupportTicket(ticketId)
     }
   }
 
