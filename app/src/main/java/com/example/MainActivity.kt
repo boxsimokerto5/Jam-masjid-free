@@ -28,6 +28,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.data.model.MosqueDisplayState
 import com.example.ui.dialogs.CastGuideDialog
+import com.example.ui.dialogs.MosqueAccountDialog
+import com.example.ui.dialogs.MosqueAdminPanelDialog
 import com.example.ui.dialogs.MosqueSubscriptionDialog
 import com.example.ui.screens.MosqueMobilePortraitScreen
 import com.example.ui.screens.MosqueTvLandscapeScreen
@@ -165,9 +167,45 @@ class MainActivity : ComponentActivity() {
                 onTestSholatMode = { minutes ->
                   viewModel.startSholatMode(minutes)
                 },
+                onOpenAdminPanel = {
+                  viewModel.setAdminPanelVisible(true)
+                },
+                onOpenAccountDialog = {
+                  viewModel.setMosqueAccountDialogVisible(true)
+                },
                 modifier = Modifier.fillMaxSize()
               )
             }
+          }
+
+          // Super Admin Panel Dialog (Monitoring Pelanggan & Lokasi Masjid)
+          if (uiState.showAdminPanelDialog) {
+            MosqueAdminPanelDialog(
+              subscribers = uiState.subscribersList,
+              isLoading = uiState.isAdminLoading,
+              onVerifyPin = { pin -> viewModel.verifyAdminPin(pin) },
+              onResetDeviceBinding = { subId -> viewModel.adminResetDeviceBinding(subId) },
+              onTogglePro = { subId, isPro -> viewModel.adminToggleProStatus(subId, isPro) },
+              onRefreshData = { viewModel.refreshAdminSubscribers() },
+              onChangePin = { newPin -> viewModel.changeAdminPin(newPin) },
+              onDismiss = { viewModel.setAdminPanelVisible(false) }
+            )
+          }
+
+          // Mosque Account & Device Binding Status Dialog
+          if (uiState.showMosqueAccountDialog) {
+            MosqueAccountDialog(
+              settings = uiState.settings,
+              isProSubscribed = uiState.isProSubscribed,
+              deviceId = uiState.currentDeviceId,
+              deviceModel = uiState.currentDeviceModel,
+              onOpenSubscription = {
+                viewModel.setSubscriptionDialogVisible(true)
+              },
+              onDismiss = {
+                viewModel.setMosqueAccountDialogVisible(false)
+              }
+            )
           }
 
           // Google Play In-App Subscription Dialog (Rp 10.000 / month)

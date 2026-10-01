@@ -31,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Cast
@@ -39,6 +40,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Mosque
@@ -50,10 +52,12 @@ import androidx.compose.material.icons.filled.PinDrop
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.StayCurrentLandscape
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.ViewSidebar
+import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.ui.text.input.KeyboardType
 import java.text.NumberFormat
@@ -134,10 +138,12 @@ fun MosqueMobilePortraitScreen(
   onTestAdzan: (PrayerType) -> Unit,
   onTestIqomah: (PrayerType, Int) -> Unit,
   onTestSholatMode: (Int) -> Unit,
+  onOpenAdminPanel: () -> Unit = {},
+  onOpenAccountDialog: () -> Unit = {},
   modifier: Modifier = Modifier
 ) {
   var selectedTab by remember { mutableIntStateOf(0) }
-  val tabTitles = listOf("🎨 Tampilan", "🕌 Jadwal", "⏱️ Iqomah", "📜 Running Text", "💰 Kas & Info")
+  val tabTitles = listOf("🎨 Tampilan", "🕌 Jadwal", "⏱️ Iqomah", "📜 Running Text", "💰 Kas & Info", "🛡️ Admin & Lisensi")
 
   // PhotoPicker for custom background
   val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -209,6 +215,33 @@ fun MosqueMobilePortraitScreen(
       }
 
       Row(verticalAlignment = Alignment.CenterVertically) {
+        // Device Binding & Account Button
+        IconButton(
+          onClick = onOpenAccountDialog,
+          modifier = Modifier
+            .size(36.dp)
+            .background(Obsidian800, CircleShape)
+            .testTag("device_binding_header_button")
+        ) {
+          Icon(Icons.Default.Devices, contentDescription = "Status Perangkat & Lisensi", tint = Emerald300, modifier = Modifier.size(18.dp))
+        }
+
+        Spacer(modifier = Modifier.width(6.dp))
+
+        // Admin Panel Button (Monitoring Lokasi & Langganan)
+        IconButton(
+          onClick = onOpenAdminPanel,
+          modifier = Modifier
+            .size(36.dp)
+            .background(Emerald800.copy(alpha = 0.9f), CircleShape)
+            .border(1.dp, Gold400, CircleShape)
+            .testTag("open_admin_panel_button")
+        ) {
+          Icon(Icons.Default.Security, contentDescription = "Panel Super Admin", tint = Gold400, modifier = Modifier.size(18.dp))
+        }
+
+        Spacer(modifier = Modifier.width(6.dp))
+
         // Cast Guide Button
         IconButton(
           onClick = onOpenCastGuide,
@@ -220,7 +253,7 @@ fun MosqueMobilePortraitScreen(
           Icon(Icons.Default.Cast, contentDescription = "Cast ke TV", tint = Gold400, modifier = Modifier.size(18.dp))
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(6.dp))
 
         // Sound Toggle
         IconButton(
@@ -1236,7 +1269,7 @@ fun MosqueMobilePortraitScreen(
           }
         }
 
-        else -> {
+        4 -> {
           // Tab 4: Kas, Petugas Jum'at, Hadits & Profil Masjid
           // 1. EDIT LAPORAN KEUANGAN KAS MASJID
           item {
@@ -1583,6 +1616,130 @@ fun MosqueMobilePortraitScreen(
                   Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
                   Spacer(modifier = Modifier.width(6.dp))
                   Text("Simpan Profil Masjid", fontWeight = FontWeight.Bold)
+                }
+              }
+            }
+          }
+        }
+
+        5 -> {
+          // Tab 5: Panel Admin & Lisensi 1 Perangkat
+          item {
+            Card(
+              modifier = Modifier.fillMaxWidth(),
+              colors = CardDefaults.cardColors(containerColor = Emerald900.copy(alpha = 0.9f)),
+              shape = RoundedCornerShape(16.dp),
+              border = BorderStroke(1.5.dp, Gold400)
+            ) {
+              Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Box(
+                      modifier = Modifier.size(42.dp).background(Emerald800, CircleShape).border(1.5.dp, Gold400, CircleShape),
+                      contentAlignment = Alignment.Center
+                    ) {
+                      Icon(Icons.Default.Devices, contentDescription = null, tint = Gold400, modifier = Modifier.size(22.dp))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                      Text("Kebijakan 1 Layar Masjid", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Gold400)
+                      Text("Single Device Policy", fontSize = 11.sp, color = IvoryWhite)
+                    }
+                  }
+
+                  Box(
+                    modifier = Modifier
+                      .background(Emerald500, RoundedCornerShape(6.dp))
+                      .padding(horizontal = 8.dp, vertical = 3.dp)
+                  ) {
+                    Text("AKTIF", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+                  }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Box(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                    .padding(12.dp)
+                ) {
+                  Column {
+                    Text("Perangkat Anda: ${uiState.currentDeviceModel}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IvoryWhite)
+                    Text("Hardware ID: ${uiState.currentDeviceId}", fontSize = 10.sp, fontFamily = FontFamily.Monospace, color = SoftGray)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                      text = "🔒 Akun langganan Rp 10.000/bln terikat pada 1 perangkat ini untuk melindungi dari pemakaian di masjid lain. Jika Anda mengganti TV/HP pengurus, Admin dapat mereset kunci perangkat.",
+                      fontSize = 11.sp,
+                      color = IvoryWhite,
+                      lineHeight = 15.sp
+                    )
+                  }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedButton(
+                  onClick = onOpenAccountDialog,
+                  modifier = Modifier.fillMaxWidth(),
+                  border = BorderStroke(1.dp, Gold400),
+                  colors = ButtonDefaults.outlinedButtonColors(contentColor = Gold400)
+                ) {
+                  Icon(Icons.Default.VpnKey, contentDescription = null, modifier = Modifier.size(16.dp))
+                  Spacer(modifier = Modifier.width(8.dp))
+                  Text("Lihat Status Lisensi Perangkat", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+              }
+            }
+          }
+
+          item {
+            Card(
+              modifier = Modifier.fillMaxWidth(),
+              colors = CardDefaults.cardColors(containerColor = Obsidian800),
+              shape = RoundedCornerShape(16.dp),
+              border = BorderStroke(1.dp, Gold400.copy(alpha = 0.5f))
+            ) {
+              Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Box(
+                    modifier = Modifier.size(42.dp).background(Emerald800, CircleShape).border(1.5.dp, Gold400, CircleShape),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(Icons.Default.AdminPanelSettings, contentDescription = null, tint = Gold400, modifier = Modifier.size(24.dp))
+                  }
+                  Spacer(modifier = Modifier.width(12.dp))
+                  Column {
+                    Text("Panel Super Admin (Pemilik)", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Gold400)
+                    Text("Monitoring Lokasi Masjid & Pelanggan", fontSize = 11.sp, color = SoftGray)
+                  }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                  text = "Fitur khusus bagi Anda sebagai pemilik aplikasi untuk:\n• Melihat daftar seluruh masjid di Indonesia yang berlangganan Rp 10.000/bln.\n• Melihat titik koordinat GPS masjid langsung di Google Maps.\n• Mereset ikatan perangkat jika pengurus masjid ganti HP/TV baru.\n• Mengaktifkan/menonaktifkan status langganan secara manual.",
+                  fontSize = 11.sp,
+                  color = IvoryWhite,
+                  lineHeight = 16.sp
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Button(
+                  onClick = onOpenAdminPanel,
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("open_admin_panel_tab_button"),
+                  colors = ButtonDefaults.buttonColors(containerColor = Gold500, contentColor = Color.Black)
+                ) {
+                  Icon(Icons.Default.Security, contentDescription = null, modifier = Modifier.size(18.dp))
+                  Spacer(modifier = Modifier.width(8.dp))
+                  Text("Buka Panel Super Admin (Butuh PIN)", fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
                 }
               }
             }

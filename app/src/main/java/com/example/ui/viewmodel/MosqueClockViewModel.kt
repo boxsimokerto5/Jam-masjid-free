@@ -24,7 +24,9 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Locale
 import com.example.data.billing.MosqueBillingManager
+import com.example.data.model.MosqueSubscriber
 import com.example.data.prayer.OnlinePrayerService
+import com.example.data.repository.MosqueSubscriberRepository
 import com.example.server.MosqueLocalPwaServer
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -53,7 +55,13 @@ data class MosqueUiState(
   val pwaServerUrl: String = "",
   val isSyncingOnline: Boolean = false,
   val onlineSyncMessage: String = "",
-  val isOnlineDataActive: Boolean = false
+  val isOnlineDataActive: Boolean = false,
+  val showAdminPanelDialog: Boolean = false,
+  val showMosqueAccountDialog: Boolean = false,
+  val subscribersList: List<MosqueSubscriber> = emptyList(),
+  val isAdminLoading: Boolean = false,
+  val currentDeviceId: String = "",
+  val currentDeviceModel: String = ""
 )
 
 class MosqueClockViewModel(application: Application) : AndroidViewModel(application) {
@@ -63,8 +71,15 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
   private val locationHelper = LocationHelper(application.applicationContext)
   private val pwaServer = MosqueLocalPwaServer(application.applicationContext)
   val billingManager = MosqueBillingManager(application.applicationContext)
+  val subscriberRepository = MosqueSubscriberRepository(application.applicationContext)
 
-  private val _uiState = MutableStateFlow(MosqueUiState(settings = repository.settingsFlow.value))
+  private val _uiState = MutableStateFlow(
+    MosqueUiState(
+      settings = repository.settingsFlow.value,
+      currentDeviceId = subscriberRepository.deviceId,
+      currentDeviceModel = subscriberRepository.deviceModel
+    )
+  )
   val uiState: StateFlow<MosqueUiState> = _uiState.asStateFlow()
 
   private var lastTriggeredPrayerMinute: String = ""
@@ -74,7 +89,22 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
     viewModelScope.launch {
       billingManager.isProSubscribed.collect { subscribed ->
         _uiState.update { it.copy(isProSubscribed = subscribed) }
+        if (subscribed) {
+          recordSubscriptionSuccess()
+        }
       }
+    }
+
+    // Observe subscriber database
+    viewModelScope.launch {
+      subscriberRepository.subscribersList.collect { list ->
+        _uiState.update { it.copy(subscribersList = list) }
+      }
+    }
+
+    // Load initial subscriber database
+    viewModelScope.launch {
+      subscriberRepository.fetchAllSubscribers()
     }
 
     // Observe settings changes
@@ -564,6 +594,56 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
 
   fun restorePurchases() {
     billingManager.queryActivePurchases()
+  }
+
+  fun recordSubscriptionSuccess(orderId: String = "") {
+    viewModelScope.launch {
+      subscriberRepository.recordOrUpdateSubscription(
+        settings = _uiState.value.settings,
+        orderId = orderId
+      )
+    }
+  }
+
+  fun setAdminPanelVisible(visible: Boolean) {
+    _uiState.update { it.copy(showAdminPanelDialog = visible) }
+    if (visible) {
+      refreshAdminSubscribers()
+    }
+  }
+
+  fun setMosqueAccountDialogVisible(visible: Boolean) {
+    _uiState.update { it.copy(showMosqueAccountDialog = visible) }
+  }
+
+  fun verifyAdminPin(pin: String): Boolean {
+    return subscriberRepository.verifyAdminPin(pin)
+  }
+
+  fun changeAdminPin(newPin: String) {
+    subscriberRepository.updateAdminPin(newPin)
+  }
+
+  fun refreshAdminSubscribers() {
+    viewModelScope.launch {
+      _uiState.update { it.copy(isAdminLoading = true) }
+      val list = subscriberRepository.fetchAllSubscribers()
+      _uiState.update { it.copy(subscribersList = list, isAdminLoading = false) }
+    }
+  }
+
+  fun adminResetDeviceBinding(subscriberId: String) {
+    viewModelScope.launch {
+      subscriberRepository.resetDeviceBinding(subscriberId)
+      refreshAdminSubscribers()
+    }
+  }
+
+  fun adminToggleProStatus(subscriberId: String, isPro: Boolean) {
+    viewModelScope.launch {
+      subscriberRepository.toggleProStatus(subscriberId, isPro)
+      refreshAdminSubscribers()
+    }
   }
 
   override fun onCleared() {
