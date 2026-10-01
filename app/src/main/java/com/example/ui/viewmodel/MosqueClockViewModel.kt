@@ -624,17 +624,15 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
     contactPhone: String,
     contactEmail: String
   ) {
-    updateMosqueName(mosqueName)
-    updateCityName(cityName)
-    repository.updateSettings { it.copy(mosqueAddress = mosqueAddress) }
+    val updatedSettings = _uiState.value.settings.copy(
+      mosqueName = mosqueName,
+      cityName = cityName,
+      mosqueAddress = mosqueAddress
+    )
+    updateSettings(updatedSettings)
 
     viewModelScope.launch {
       val orderId = _uiState.value.currentOrderId.ifBlank { "GPA.${System.currentTimeMillis()}" }
-      val updatedSettings = _uiState.value.settings.copy(
-        mosqueName = mosqueName,
-        cityName = cityName,
-        mosqueAddress = mosqueAddress
-      )
       subscriberRepository.recordOrUpdateSubscription(
         settings = updatedSettings,
         orderId = orderId,
@@ -643,6 +641,7 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
         dkmLeaderName = dkmLeader
       )
       subscriberRepository.fetchAllSubscribers()
+      _uiState.update { it.copy(showPostPaymentRegistrationDialog = false) }
     }
   }
 

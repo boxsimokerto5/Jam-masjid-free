@@ -75,7 +75,7 @@ fun MosqueTvLandscapeScreen(
   onStartSholatNow: () -> Unit,
   modifier: Modifier = Modifier
 ) {
-  BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+  BoxWithConstraints(modifier = modifier.fillMaxSize().padding(horizontal = 4.dp)) {
     val screenWidth = maxWidth
     val screenHeight = maxHeight
     val isCompactHeight = screenHeight < 450.dp
@@ -117,46 +117,49 @@ fun MosqueTvLandscapeScreen(
             Column {
               Text(
                 text = uiState.settings.mosqueName,
-                fontSize = if (isCompactHeight) 16.sp else 21.sp,
+                fontSize = if (isCompactHeight) 15.sp else 20.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = Gold400,
                 letterSpacing = 1.sp,
-                maxLines = 1
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
               )
               Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                   text = uiState.settings.mosqueAddress,
-                  fontSize = if (isCompactHeight) 10.sp else 12.sp,
+                  fontSize = if (isCompactHeight) 9.5.sp else 11.5.sp,
                   fontWeight = FontWeight.Medium,
-                  color = SoftGray
+                  color = SoftGray,
+                  maxLines = 1,
+                  overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 // Active TV Mirroring indicator
                 Box(
                   modifier = Modifier
                     .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
                     .border(0.5.dp, Emerald500.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
-                    .padding(horizontal = 6.dp, vertical = 1.dp)
+                    .padding(horizontal = 5.dp, vertical = 1.dp)
                 ) {
                   Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(6.dp).background(Emerald500, CircleShape))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("TV MIRRORING", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = Emerald300)
+                    Box(modifier = Modifier.size(5.dp).background(Emerald500, CircleShape))
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text("TV", fontSize = 7.5.sp, fontWeight = FontWeight.Bold, color = Emerald300)
                   }
                 }
 
                 if (uiState.isOnlineDataActive) {
-                  Spacer(modifier = Modifier.width(6.dp))
+                  Spacer(modifier = Modifier.width(4.dp))
                   Box(
                     modifier = Modifier
                       .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
                       .border(0.8.dp, Gold400, RoundedCornerShape(4.dp))
-                      .padding(horizontal = 7.dp, vertical = 2.dp)
+                      .padding(horizontal = 5.dp, vertical = 1.dp)
                   ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                      Box(modifier = Modifier.size(7.dp).background(Emerald500, CircleShape))
-                      Spacer(modifier = Modifier.width(5.dp))
-                      Text("ONLINE KEMENAG RI (OTOMATIS)", fontSize = 8.5.sp, fontWeight = FontWeight.ExtraBold, color = Gold400)
+                      Box(modifier = Modifier.size(5.dp).background(Emerald500, CircleShape))
+                      Spacer(modifier = Modifier.width(3.dp))
+                      Text("KEMENAG", fontSize = 7.5.sp, fontWeight = FontWeight.ExtraBold, color = Gold400)
                     }
                   }
                 }
@@ -170,26 +173,26 @@ fun MosqueTvLandscapeScreen(
               modifier = Modifier
                 .background(
                   color = Obsidian900.copy(alpha = 0.85f),
-                  shape = RoundedCornerShape(20.dp)
+                  shape = RoundedCornerShape(16.dp)
                 )
                 .border(
-                  width = 1.5.dp,
+                  width = 1.dp,
                   color = Gold500.copy(alpha = 0.85f),
-                  shape = RoundedCornerShape(20.dp)
+                  shape = RoundedCornerShape(16.dp)
                 )
-                .padding(horizontal = if (isCompactHeight) 12.dp else 16.dp, vertical = 4.dp)
+                .padding(horizontal = if (isCompactHeight) 10.dp else 14.dp, vertical = 3.dp)
             ) {
               Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                   text = "MENUJU ${uiState.nextPrayer.type.displayName.uppercase()}:",
-                  fontSize = if (isCompactHeight) 11.sp else 12.sp,
+                  fontSize = if (isCompactHeight) 10.5.sp else 12.sp,
                   fontWeight = FontWeight.Bold,
                   color = Gold400,
-                  modifier = Modifier.padding(end = 6.dp)
+                  modifier = Modifier.padding(end = 5.dp)
                 )
                 Text(
-                  text = "-${uiState.timeUntilNextPrayer}",
-                  fontSize = if (isCompactHeight) 14.sp else 17.sp,
+                  text = uiState.timeUntilNextPrayer,
+                  fontSize = if (isCompactHeight) 13.sp else 16.sp,
                   fontWeight = FontWeight.ExtraBold,
                   fontFamily = FontFamily.Monospace,
                   color = IvoryWhite
@@ -203,27 +206,27 @@ fun MosqueTvLandscapeScreen(
             Column(horizontalAlignment = Alignment.End) {
               Text(
                 text = uiState.gregorianDate,
-                fontSize = if (isCompactHeight) 12.sp else 14.sp,
+                fontSize = if (isCompactHeight) 11.sp else 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = IvoryWhite
               )
               Text(
                 text = uiState.hijriDate,
-                fontSize = if (isCompactHeight) 11.sp else 13.sp,
+                fontSize = if (isCompactHeight) 10.sp else 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Emerald500
               )
             }
 
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             // Switch to Mobile layout pill/button
             Box(
               modifier = Modifier
-                .background(Obsidian900.copy(alpha = 0.8f), RoundedCornerShape(16.dp))
-                .border(1.dp, Gold400.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                .background(Obsidian900.copy(alpha = 0.8f), RoundedCornerShape(14.dp))
+                .border(1.dp, Gold400.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
                 .clickable { onOpenSettings() }
-                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .padding(horizontal = 7.dp, vertical = 3.dp)
                 .testTag("switch_to_mobile_view")
             ) {
               Row(verticalAlignment = Alignment.CenterVertically) {
@@ -231,29 +234,29 @@ fun MosqueTvLandscapeScreen(
                   imageVector = Icons.Default.PhoneAndroid,
                   contentDescription = "Mode HP",
                   tint = Gold400,
-                  modifier = Modifier.size(16.dp)
+                  modifier = Modifier.size(14.dp)
                 )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Mode HP", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Gold400)
+                Spacer(modifier = Modifier.width(3.dp))
+                Text("Mode HP", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Gold400)
               }
             }
 
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(5.dp))
 
             // Screencast Button with PRO indicator
             Box(
               modifier = Modifier
                 .background(
                   color = if (uiState.isProSubscribed) Emerald800 else Gold500,
-                  shape = RoundedCornerShape(16.dp)
+                  shape = RoundedCornerShape(14.dp)
                 )
                 .border(
                   width = 1.dp,
                   color = if (uiState.isProSubscribed) Emerald500 else Gold400,
-                  shape = RoundedCornerShape(16.dp)
+                  shape = RoundedCornerShape(14.dp)
                 )
                 .clickable { onOpenCastGuide() }
-                .padding(horizontal = 10.dp, vertical = 5.dp)
+                .padding(horizontal = 8.dp, vertical = 3.dp)
                 .testTag("tv_screencast_button")
             ) {
               Row(verticalAlignment = Alignment.CenterVertically) {
@@ -261,12 +264,12 @@ fun MosqueTvLandscapeScreen(
                   imageVector = Icons.Default.Cast,
                   contentDescription = "Screencast TV",
                   tint = if (uiState.isProSubscribed) IvoryWhite else Color.Black,
-                  modifier = Modifier.size(16.dp)
+                  modifier = Modifier.size(14.dp)
                 )
-                Spacer(modifier = Modifier.width(5.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                  text = if (uiState.isProSubscribed) "Cast Aktif" else "Screencast (Rp 10rb)",
-                  fontSize = 11.sp,
+                  text = if (uiState.isProSubscribed) "Cast Aktif" else "Cast TV",
+                  fontSize = 10.sp,
                   fontWeight = FontWeight.ExtraBold,
                   color = if (uiState.isProSubscribed) IvoryWhite else Color.Black
                 )

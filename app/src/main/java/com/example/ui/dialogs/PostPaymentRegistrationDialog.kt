@@ -350,7 +350,7 @@ fun PostPaymentRegistrationDialog(
               onValueChange = { contactEmail = it },
               placeholder = { Text("Contoh: takmir.masjid@gmail.com", fontSize = 11.sp) },
               leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = SoftGray, modifier = Modifier.size(16.dp)) },
-              keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.EmailAddress),
+              keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
               singleLine = true,
               modifier = Modifier.fillMaxWidth(),
               colors = OutlinedTextFieldDefaults.colors(

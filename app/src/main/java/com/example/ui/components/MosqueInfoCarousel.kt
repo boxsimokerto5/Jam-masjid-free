@@ -49,7 +49,8 @@ import java.util.Locale
 fun MosqueInfoCarousel(
   settings: MosqueSettings,
   activeSlideIndex: Int,
-  modifier: Modifier = Modifier
+  modifier: Modifier = Modifier,
+  isCompact: Boolean = false
 ) {
   val idFormat = NumberFormat.getCurrencyInstance(Locale("id", "ID")).apply {
     maximumFractionDigits = 0
@@ -59,14 +60,14 @@ fun MosqueInfoCarousel(
     modifier = modifier
       .background(
         color = Obsidian900.copy(alpha = 0.75f),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(14.dp)
       )
       .border(
         width = 1.dp,
         color = Gold500.copy(alpha = 0.35f),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(14.dp)
       )
-      .padding(14.dp)
+      .padding(horizontal = if (isCompact) 12.dp else 14.dp, vertical = if (isCompact) 6.dp else 12.dp)
   ) {
     AnimatedContent(
       targetState = activeSlideIndex,

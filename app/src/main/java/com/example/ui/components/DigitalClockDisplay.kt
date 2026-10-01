@@ -58,14 +58,15 @@ fun DigitalClockDisplay(
     modifier = modifier
       .background(
         color = Obsidian900.copy(alpha = 0.75f),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(14.dp)
       )
       .border(
         width = 1.5.dp,
-        color = Gold500.copy(alpha = 0.4f),
-        shape = RoundedCornerShape(16.dp)
+        color = Gold500.copy(alpha = 0.45f),
+        shape = RoundedCornerShape(14.dp)
       )
-      .padding(horizontal = 16.dp, vertical = 8.dp)
+      .padding(horizontal = 14.dp, vertical = 6.dp),
+    contentAlignment = Alignment.Center
   ) {
     Row(
       verticalAlignment = Alignment.CenterVertically,

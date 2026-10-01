@@ -45,6 +45,7 @@ class SettingsRepository(context: Context) {
       backgroundType = prefs.getString("bg_type", "preset_twilight") ?: "preset_twilight",
       customBackgroundUri = prefs.getString("custom_bg_uri", "") ?: "",
       overlayDarkness = prefs.getFloat("overlay_darkness", 0.50f),
+      tvLayoutTheme = prefs.getString("tv_layout_theme", "modern_split") ?: "modern_split",
       runningTexts = runningTexts,
       runningTextSpeed = prefs.getInt("running_speed", 45),
       iqomahSubuh = prefs.getInt("iqomah_subuh", 15),
@@ -86,6 +87,7 @@ class SettingsRepository(context: Context) {
       putString("bg_type", newSettings.backgroundType)
       putString("custom_bg_uri", newSettings.customBackgroundUri)
       putFloat("overlay_darkness", newSettings.overlayDarkness)
+      putString("tv_layout_theme", newSettings.tvLayoutTheme)
       putString("running_texts_pipe", newSettings.runningTexts.joinToString("|||"))
       putInt("running_speed", newSettings.runningTextSpeed)
       putInt("iqomah_subuh", newSettings.iqomahSubuh)

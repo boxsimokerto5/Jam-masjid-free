@@ -1,5 +1,6 @@
 package com.example
 
+import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Bundle
 import android.view.WindowManager
@@ -47,17 +48,18 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
 
+    // Paksa perangkat menjadi landscape saat awal dibuka agar tampilan jam masjid langsung tampil sempurna
+    requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+
     // Keep screen on continuously for Mosque Display
     window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
     setContent {
       MosqueClockTheme {
         val uiState by viewModel.uiState.collectAsState()
-        val configuration = LocalConfiguration.current
-        val isPhysicalLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-        // Responsive dynamic orientation: true if phone is physically in landscape OR if user toggled TV mode
-        val showTvDashboard = isPhysicalLandscape || uiState.isForcedTvMode
+        // Default menampilkan dashboard TV horizontal (landscape)
+        val showTvDashboard = uiState.isForcedTvMode
 
         // Immersive TV full-screen mode on landscape / TV mirroring
         val view = LocalView.current
@@ -74,10 +76,11 @@ class MainActivity : ComponentActivity() {
         }
 
         // Handle Back button
-        BackHandler(enabled = uiState.isForcedTvMode || uiState.displayState != MosqueDisplayState.NORMAL) {
+        BackHandler(enabled = !uiState.isForcedTvMode || uiState.displayState != MosqueDisplayState.NORMAL) {
           if (uiState.displayState != MosqueDisplayState.NORMAL) {
             viewModel.dismissSpecialState()
-          } else if (uiState.isForcedTvMode) {
+          } else if (!uiState.isForcedTvMode) {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             viewModel.toggleForcedTvMode()
           }
         }
@@ -100,9 +103,9 @@ class MainActivity : ComponentActivity() {
               MosqueTvLandscapeScreen(
                 uiState = uiState,
                 onOpenSettings = {
-                  if (uiState.isForcedTvMode) {
-                    viewModel.toggleForcedTvMode()
-                  }
+                  // Switch to settings/mobile layout (allows orientation flexibility for typing)
+                  requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                  viewModel.toggleForcedTvMode()
                 },
                 onOpenCastGuide = {
                   viewModel.onScreencastClicked()
@@ -123,6 +126,8 @@ class MainActivity : ComponentActivity() {
               MosqueMobilePortraitScreen(
                 uiState = uiState,
                 onToggleTvMode = {
+                  // Lock back to landscape for TV
+                  requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
                   viewModel.toggleForcedTvMode()
                 },
                 onOpenCastGuide = {
