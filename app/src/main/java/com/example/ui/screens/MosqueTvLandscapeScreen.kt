@@ -268,7 +268,7 @@ fun MosqueTvLandscapeScreen(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                  text = if (uiState.isProSubscribed) "Cast Aktif" else "Cast TV",
+                  text = if (uiState.isProSubscribed) "Miracast On" else "Miracast",
                   fontSize = 10.sp,
                   fontWeight = FontWeight.ExtraBold,
                   color = if (uiState.isProSubscribed) IvoryWhite else Color.Black
@@ -286,7 +286,8 @@ fun MosqueTvLandscapeScreen(
             uiState = uiState,
             screenWidth = screenWidth,
             isCompactHeight = isCompactHeight,
-            headerContent = headerContent
+            onOpenSettings = onOpenSettings,
+            onOpenCastGuide = onOpenCastGuide
           )
         }
         "center_dome" -> {

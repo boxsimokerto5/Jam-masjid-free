@@ -16,21 +16,24 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.MosqueSettings
@@ -59,15 +62,20 @@ fun MosqueInfoCarousel(
   Box(
     modifier = modifier
       .background(
-        color = Obsidian900.copy(alpha = 0.75f),
+        brush = Brush.verticalGradient(
+          colors = listOf(
+            Obsidian900.copy(alpha = 0.88f),
+            Color(0xFF091410).copy(alpha = 0.94f)
+          )
+        ),
         shape = RoundedCornerShape(14.dp)
       )
       .border(
         width = 1.dp,
-        color = Gold500.copy(alpha = 0.35f),
+        color = Gold500.copy(alpha = 0.45f),
         shape = RoundedCornerShape(14.dp)
       )
-      .padding(horizontal = if (isCompact) 12.dp else 14.dp, vertical = if (isCompact) 6.dp else 12.dp)
+      .padding(horizontal = if (isCompact) 10.dp else 14.dp, vertical = if (isCompact) 6.dp else 10.dp)
   ) {
     AnimatedContent(
       targetState = activeSlideIndex,
@@ -80,56 +88,77 @@ fun MosqueInfoCarousel(
           Column(modifier = Modifier.fillMaxWidth()) {
             Row(
               verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.SpaceBetween,
               modifier = Modifier.fillMaxWidth()
             ) {
-              Icon(
-                imageVector = Icons.Default.AccountBalanceWallet,
-                contentDescription = null,
-                tint = Gold400,
-                modifier = Modifier.size(20.dp)
-              )
-              Text(
-                text = "LAPORAN KAS MASJID",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = Gold400,
-                modifier = Modifier.padding(start = 6.dp)
-              )
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                  imageVector = Icons.Default.AccountBalanceWallet,
+                  contentDescription = null,
+                  tint = Gold400,
+                  modifier = Modifier.size(if (isCompact) 18.dp else 22.dp)
+                )
+                Text(
+                  text = "LAPORAN KAS & SALDO KEUANGAN",
+                  fontSize = if (isCompact) 11.5.sp else 13.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = Gold400,
+                  modifier = Modifier.padding(start = 6.dp)
+                )
+              }
+
+              // Slide Dots Indicator
+              SlideDotsIndicator(currentIndex = 0)
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
 
             Row(
               modifier = Modifier.fillMaxWidth(),
               horizontalArrangement = Arrangement.SpaceBetween,
               verticalAlignment = Alignment.CenterVertically
             ) {
+              // Saldo Akhir
               Column {
-                Text(text = "Saldo Akhir", fontSize = 11.sp, color = SoftGray)
+                Text(
+                  text = "Saldo Akhir Kas",
+                  fontSize = if (isCompact) 10.sp else 11.5.sp,
+                  color = SoftGray
+                )
                 Text(
                   text = idFormat.format(settings.kasSaldo),
-                  fontSize = 17.sp,
-                  fontWeight = FontWeight.Bold,
+                  fontSize = if (isCompact) 15.sp else 19.sp,
+                  fontWeight = FontWeight.ExtraBold,
                   fontFamily = FontFamily.Monospace,
                   color = Emerald300
                 )
               }
 
-              Column {
-                Text(text = "Pemasukan", fontSize = 11.sp, color = SoftGray)
+              // Pemasukan
+              Column(horizontalAlignment = Alignment.End) {
+                Text(
+                  text = "Pemasukan",
+                  fontSize = if (isCompact) 9.5.sp else 11.sp,
+                  color = SoftGray
+                )
                 Text(
                   text = "+ " + idFormat.format(settings.kasPemasukan),
-                  fontSize = 13.sp,
+                  fontSize = if (isCompact) 11.5.sp else 13.5.sp,
                   fontWeight = FontWeight.SemiBold,
                   color = Emerald500
                 )
               }
 
-              Column {
-                Text(text = "Pengeluaran", fontSize = 11.sp, color = SoftGray)
+              // Pengeluaran
+              Column(horizontalAlignment = Alignment.End) {
+                Text(
+                  text = "Pengeluaran",
+                  fontSize = if (isCompact) 9.5.sp else 11.sp,
+                  color = SoftGray
+                )
                 Text(
                   text = "- " + idFormat.format(settings.kasPengeluaran),
-                  fontSize = 13.sp,
+                  fontSize = if (isCompact) 11.5.sp else 13.5.sp,
                   fontWeight = FontWeight.SemiBold,
                   color = Color(0xFFF87171)
                 )
@@ -143,63 +172,71 @@ fun MosqueInfoCarousel(
           Column(modifier = Modifier.fillMaxWidth()) {
             Row(
               verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.SpaceBetween,
               modifier = Modifier.fillMaxWidth()
             ) {
-              Icon(
-                imageVector = Icons.Default.CalendarMonth,
-                contentDescription = null,
-                tint = Gold400,
-                modifier = Modifier.size(20.dp)
-              )
-              Text(
-                text = "PETUGAS SHOLAT JUM'AT",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = Gold400,
-                modifier = Modifier.padding(start = 6.dp)
-              )
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                  imageVector = Icons.Default.CalendarMonth,
+                  contentDescription = null,
+                  tint = Gold400,
+                  modifier = Modifier.size(if (isCompact) 18.dp else 22.dp)
+                )
+                Text(
+                  text = "JADWAL PETUGAS JUM'AT",
+                  fontSize = if (isCompact) 11.5.sp else 13.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = Gold400,
+                  modifier = Modifier.padding(start = 6.dp)
+                )
+              }
+
+              SlideDotsIndicator(currentIndex = 1)
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
 
             Row(
               modifier = Modifier.fillMaxWidth(),
               horizontalArrangement = Arrangement.SpaceBetween
             ) {
               Column(modifier = Modifier.weight(1f)) {
-                Text(text = "Khotib:", fontSize = 11.sp, color = SoftGray)
+                Text(text = "Khotib:", fontSize = if (isCompact) 9.5.sp else 11.sp, color = SoftGray)
                 Text(
                   text = settings.jumatKhotib,
-                  fontSize = 13.sp,
+                  fontSize = if (isCompact) 11.5.sp else 13.sp,
                   fontWeight = FontWeight.Bold,
                   color = IvoryWhite,
-                  maxLines = 1
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis
                 )
               }
 
-              Spacer(modifier = Modifier.width(8.dp))
+              Spacer(modifier = Modifier.width(6.dp))
 
               Column(modifier = Modifier.weight(1f)) {
-                Text(text = "Imam:", fontSize = 11.sp, color = SoftGray)
+                Text(text = "Imam:", fontSize = if (isCompact) 9.5.sp else 11.sp, color = SoftGray)
                 Text(
                   text = settings.jumatImam,
-                  fontSize = 13.sp,
+                  fontSize = if (isCompact) 11.5.sp else 13.sp,
                   fontWeight = FontWeight.Bold,
                   color = IvoryWhite,
-                  maxLines = 1
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis
                 )
               }
 
-              Spacer(modifier = Modifier.width(8.dp))
+              Spacer(modifier = Modifier.width(6.dp))
 
               Column(modifier = Modifier.weight(1f)) {
-                Text(text = "Muadzin:", fontSize = 11.sp, color = SoftGray)
+                Text(text = "Muadzin:", fontSize = if (isCompact) 9.5.sp else 11.sp, color = SoftGray)
                 Text(
                   text = settings.jumatMuadzin,
-                  fontSize = 13.sp,
+                  fontSize = if (isCompact) 11.5.sp else 13.sp,
                   fontWeight = FontWeight.Bold,
                   color = IvoryWhite,
-                  maxLines = 1
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis
                 )
               }
             }
@@ -207,39 +244,78 @@ fun MosqueInfoCarousel(
         }
 
         else -> {
-          // Slide 2: Mutiara Hadits
+          // Slide 2: Kata Hikmah & Mutiara Hadits
           Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.SpaceBetween,
+              modifier = Modifier.fillMaxWidth()
+            ) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                  imageVector = Icons.Default.AutoAwesome,
+                  contentDescription = null,
+                  tint = Gold400,
+                  modifier = Modifier.size(if (isCompact) 18.dp else 22.dp)
+                )
+                Text(
+                  text = "KATA HIKMAH & MUTIARA HADITS",
+                  fontSize = if (isCompact) 11.5.sp else 13.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = Gold400,
+                  modifier = Modifier.padding(start = 6.dp)
+                )
+              }
+
+              SlideDotsIndicator(currentIndex = 2)
+            }
+
+            Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 6.dp))
+
             Row(
               verticalAlignment = Alignment.CenterVertically,
               modifier = Modifier.fillMaxWidth()
             ) {
               Icon(
-                imageVector = Icons.Default.AutoAwesome,
+                imageVector = Icons.Default.FormatQuote,
                 contentDescription = null,
-                tint = Gold400,
-                modifier = Modifier.size(20.dp)
+                tint = Gold500.copy(alpha = 0.7f),
+                modifier = Modifier.size(if (isCompact) 16.dp else 20.dp)
               )
+              Spacer(modifier = Modifier.width(4.dp))
               Text(
-                text = "MUTIARA SUNNAH",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = Gold400,
-                modifier = Modifier.padding(start = 6.dp)
+                text = settings.mutiaraHadits,
+                fontSize = if (isCompact) 11.5.sp else 13.5.sp,
+                fontStyle = FontStyle.Italic,
+                fontWeight = FontWeight.Medium,
+                color = IvoryWhite,
+                lineHeight = if (isCompact) 16.sp else 19.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
               )
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-              text = settings.mutiaraHadits,
-              fontSize = 13.sp,
-              fontWeight = FontWeight.Medium,
-              color = IvoryWhite,
-              lineHeight = 18.sp
-            )
           }
         }
       }
+    }
+  }
+}
+
+@Composable
+private fun SlideDotsIndicator(currentIndex: Int) {
+  Row(
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(4.dp)
+  ) {
+    repeat(3) { idx ->
+      Box(
+        modifier = Modifier
+          .size(if (idx == currentIndex) 7.dp else 5.dp)
+          .background(
+            color = if (idx == currentIndex) Gold400 else Color.White.copy(alpha = 0.25f),
+            shape = CircleShape
+          )
+      )
     }
   }
 }

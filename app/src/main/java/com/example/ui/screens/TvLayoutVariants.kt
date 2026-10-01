@@ -3,6 +3,7 @@ package com.example.ui.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,15 +14,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cast
+import androidx.compose.material.icons.filled.Mosque
+import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,6 +41,7 @@ import com.example.ui.components.MarqueeTextBanner
 import com.example.ui.components.MosqueInfoCarousel
 import com.example.ui.components.PrayerTimeCard
 import com.example.ui.theme.Emerald300
+import com.example.ui.theme.Emerald500
 import com.example.ui.theme.Emerald800
 import com.example.ui.theme.Emerald900
 import com.example.ui.theme.Gold400
@@ -131,49 +142,52 @@ fun ModernSplitTvLayout(
 
 /**
  * TATA LETAK 2: VERTICAL SIDEBAR
- * Sidebar kiri berisi Jam & list vertikal semua jadwal sholat.
- * Sisi kanan berisi Header masjid, Countdown besar, Carousel Info luas, & Marquee.
+ * Sidebar kiri dinaikkan dan dipercantik: Jam di atas, 8 sholat rapi tanpa terpotong, tanggal di bawah.
+ * Sisi kanan: Header lengkap dengan tombol Mode HP & Miracast,
+ * Area tengah megah diisi Carousel slide berganti (Laporan Kas, Kata Hikmah & Hadits, Petugas Jum'at),
+ * dan Running Text di bagian bawah.
  */
 @Composable
 fun VerticalSidebarTvLayout(
   uiState: MosqueUiState,
   screenWidth: Dp,
   isCompactHeight: Boolean,
-  headerContent: @Composable () -> Unit,
+  onOpenSettings: () -> Unit = {},
+  onOpenCastGuide: () -> Unit = {},
   modifier: Modifier = Modifier
 ) {
   Row(modifier = modifier.fillMaxSize()) {
-    // SIDEBAR KIRI (Jam & Vertikal Prayer List)
+    // 1. SIDEBAR KIRI (Dinaikkan, kompak, jam di atas, 8 jadwal sholat muat sempurna)
     Box(
       modifier = Modifier
-        .width(if (screenWidth < 700.dp) 210.dp else 250.dp)
+        .width(if (screenWidth < 700.dp) 195.dp else 235.dp)
         .fillMaxHeight()
-        .background(Obsidian900.copy(alpha = 0.92f))
-        .border(width = 1.dp, color = Gold500.copy(alpha = 0.35f))
-        .padding(horizontal = 8.dp, vertical = 6.dp)
+        .background(Obsidian900.copy(alpha = 0.94f))
+        .border(width = 1.dp, color = Gold500.copy(alpha = 0.4f))
+        .padding(horizontal = 6.dp, vertical = 4.dp)
     ) {
       Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.SpaceBetween,
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
-        // Digital Clock Compact
+        // Digital Clock Compact & Upward
         DigitalClockDisplay(
           timeFormatted = uiState.timeFormatted,
           secondsFormatted = uiState.secondsFormatted,
-          timeFontSize = if (isCompactHeight) 34.sp else 42.sp,
-          secondsFontSize = if (isCompactHeight) 13.sp else 16.sp,
+          timeFontSize = if (isCompactHeight) 28.sp else 36.sp,
+          secondsFontSize = if (isCompactHeight) 12.sp else 15.sp,
           modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(3.dp))
+        Spacer(modifier = Modifier.height(2.dp))
 
-        // Vertical Prayer Times List
+        // 8 Jadwal Sholat Vertikal (Kompak, tidak terpotong, Isya' tampil utuh)
         Column(
           modifier = Modifier
             .fillMaxWidth()
             .weight(1f, fill = false),
-          verticalArrangement = Arrangement.spacedBy(if (isCompactHeight) 2.dp else 4.dp)
+          verticalArrangement = Arrangement.spacedBy(1.5.dp)
         ) {
           uiState.prayerTimes.forEach { prayer ->
             SidebarPrayerItemRow(prayer = prayer, isCompactHeight = isCompactHeight)
@@ -182,74 +196,205 @@ fun VerticalSidebarTvLayout(
 
         Spacer(modifier = Modifier.height(2.dp))
 
-        // Date text at bottom of sidebar
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-          Text(text = uiState.hijriDate, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Emerald300)
-          Text(text = uiState.gregorianDate, fontSize = 9.5.sp, color = SoftGray)
+        // Tanggal Hijriyah & Masehi di bawah sidebar
+        Column(
+          horizontalAlignment = Alignment.CenterHorizontally,
+          modifier = Modifier.padding(bottom = 2.dp)
+        ) {
+          Text(
+            text = uiState.hijriDate,
+            fontSize = 9.5.sp,
+            fontWeight = FontWeight.Bold,
+            color = Emerald300,
+            maxLines = 1
+          )
+          Text(
+            text = uiState.gregorianDate,
+            fontSize = 8.5.sp,
+            color = SoftGray,
+            maxLines = 1
+          )
         }
       }
     }
 
-    // MAIN CONTENT KANAN (Header, Big Countdown, Info Carousel, Marquee)
+    // 2. MAIN CONTENT KANAN (Header khusus tanpa overflow, Center Carousel luas, Marquee)
     Column(
       modifier = Modifier
         .weight(1f)
         .fillMaxHeight()
-        .padding(top = if (isCompactHeight) 4.dp else 8.dp),
+        .padding(top = 4.dp),
       verticalArrangement = Arrangement.SpaceBetween
     ) {
-      headerContent()
-
-      // Big Next Prayer Countdown Banner
-      if (uiState.nextPrayer != null) {
-        Box(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 2.dp)
-            .background(Emerald900.copy(alpha = 0.85f), RoundedCornerShape(12.dp))
-            .border(1.5.dp, Gold400, RoundedCornerShape(12.dp))
-            .padding(horizontal = 14.dp, vertical = if (isCompactHeight) 4.dp else 8.dp),
-          contentAlignment = Alignment.Center
+      // Header Khusus Area Kanan (Tombol Mode HP & Miracast selalu tampil utuh!)
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(horizontal = 12.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        // Identitas Masjid
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          modifier = Modifier.weight(1f, fill = false)
         ) {
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+          Box(
+            modifier = Modifier
+              .size(if (isCompactHeight) 32.dp else 38.dp)
+              .background(Emerald800, shape = CircleShape)
+              .border(1.dp, Gold400, shape = CircleShape),
+            contentAlignment = Alignment.Center
           ) {
-            Text(
-              text = "MENUJU ${uiState.nextPrayer.type.displayName.uppercase()}:",
-              fontSize = if (isCompactHeight) 13.sp else 16.sp,
-              fontWeight = FontWeight.Bold,
-              color = Gold400
+            Icon(
+              imageVector = Icons.Default.Mosque,
+              contentDescription = "Mosque Logo",
+              tint = Gold400,
+              modifier = Modifier.size(if (isCompactHeight) 18.dp else 22.dp)
             )
-            Spacer(modifier = Modifier.width(10.dp))
+          }
+
+          Spacer(modifier = Modifier.width(8.dp))
+
+          Column {
             Text(
-              text = uiState.timeUntilNextPrayer,
-              fontSize = if (isCompactHeight) 20.sp else 28.sp,
+              text = uiState.settings.mosqueName,
+              fontSize = if (isCompactHeight) 14.sp else 18.sp,
               fontWeight = FontWeight.ExtraBold,
-              fontFamily = FontFamily.Monospace,
-              color = IvoryWhite
+              color = Gold400,
+              letterSpacing = 0.5.sp,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis
             )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Text(
+                text = uiState.settings.mosqueAddress,
+                fontSize = if (isCompactHeight) 9.sp else 11.sp,
+                color = SoftGray,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+              )
+              Spacer(modifier = Modifier.width(6.dp))
+              Box(
+                modifier = Modifier
+                  .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(3.dp))
+                  .border(0.5.dp, Emerald500.copy(alpha = 0.7f), RoundedCornerShape(3.dp))
+                  .padding(horizontal = 4.dp, vertical = 1.dp)
+              ) {
+                Text("TV", fontSize = 7.5.sp, fontWeight = FontWeight.Bold, color = Emerald300)
+              }
+              if (uiState.isOnlineDataActive) {
+                Spacer(modifier = Modifier.width(4.dp))
+                Box(
+                  modifier = Modifier
+                    .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(3.dp))
+                    .border(0.5.dp, Gold400, RoundedCornerShape(3.dp))
+                    .padding(horizontal = 4.dp, vertical = 1.dp)
+                ) {
+                  Text("KEMENAG", fontSize = 7.5.sp, fontWeight = FontWeight.ExtraBold, color = Gold400)
+                }
+              }
+            }
+          }
+        }
+
+        // Action Buttons: Countdown Badge + Mode HP + Miracast
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+          if (uiState.nextPrayer != null) {
+            Box(
+              modifier = Modifier
+                .background(Obsidian900.copy(alpha = 0.85f), RoundedCornerShape(12.dp))
+                .border(1.dp, Gold500.copy(alpha = 0.85f), RoundedCornerShape(12.dp))
+                .padding(horizontal = 8.dp, vertical = 3.dp)
+            ) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                  text = "MENUJU ${uiState.nextPrayer.type.displayName.uppercase()}:",
+                  fontSize = if (isCompactHeight) 9.5.sp else 11.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = Gold400,
+                  modifier = Modifier.padding(end = 4.dp)
+                )
+                Text(
+                  text = uiState.timeUntilNextPrayer,
+                  fontSize = if (isCompactHeight) 12.sp else 14.sp,
+                  fontWeight = FontWeight.ExtraBold,
+                  fontFamily = FontFamily.Monospace,
+                  color = IvoryWhite
+                )
+              }
+            }
+          }
+
+          // Tombol Kembali ke Mode HP
+          Box(
+            modifier = Modifier
+              .background(Obsidian900.copy(alpha = 0.85f), RoundedCornerShape(12.dp))
+              .border(1.dp, Gold400.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+              .clickable { onOpenSettings() }
+              .padding(horizontal = 8.dp, vertical = 3.dp)
+              .testTag("sidebar_mode_hp_button")
+          ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                imageVector = Icons.Default.PhoneAndroid,
+                contentDescription = "Mode HP",
+                tint = Gold400,
+                modifier = Modifier.size(13.dp)
+              )
+              Spacer(modifier = Modifier.width(3.dp))
+              Text("Mode HP", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = Gold400)
+            }
+          }
+
+          // Tombol Miracast / Screencast TV
+          Box(
+            modifier = Modifier
+              .background(if (uiState.isProSubscribed) Emerald800 else Gold500, RoundedCornerShape(12.dp))
+              .border(1.dp, if (uiState.isProSubscribed) Emerald500 else Gold400, RoundedCornerShape(12.dp))
+              .clickable { onOpenCastGuide() }
+              .padding(horizontal = 8.dp, vertical = 3.dp)
+              .testTag("sidebar_miracast_button")
+          ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                imageVector = Icons.Default.Cast,
+                contentDescription = "Miracast",
+                tint = if (uiState.isProSubscribed) IvoryWhite else Color.Black,
+                modifier = Modifier.size(13.dp)
+              )
+              Spacer(modifier = Modifier.width(3.dp))
+              Text(
+                text = if (uiState.isProSubscribed) "Miracast On" else "Miracast",
+                fontSize = 9.5.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = if (uiState.isProSubscribed) IvoryWhite else Color.Black
+              )
+            }
           }
         }
       }
 
-      // Large Info Carousel
+      // 3. TENGAH HERO STAGE: CAROUSEL SLIDE BERGANTI (Kas, Kata Hikmah & Hadits, Petugas Jumat)
       Box(
         modifier = Modifier
           .fillMaxWidth()
           .weight(1f)
-          .padding(horizontal = 14.dp, vertical = 4.dp),
+          .padding(horizontal = 12.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
       ) {
         MosqueInfoCarousel(
           settings = uiState.settings,
           activeSlideIndex = uiState.activeInfoSlideIndex,
-          isCompact = isCompactHeight,
+          isCompact = false,
           modifier = Modifier.fillMaxWidth()
         )
       }
 
-      // Marquee Banner
+      // 4. FOOTER: Running Text Marquee
       MarqueeTextBanner(
         texts = uiState.settings.runningTexts,
         velocityDp = uiState.settings.runningTextSpeed
@@ -592,21 +737,21 @@ private fun SidebarPrayerItemRow(prayer: PrayerTimeItem, isCompactHeight: Boolea
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .background(bg, RoundedCornerShape(6.dp))
-      .border(border, RoundedCornerShape(6.dp))
-      .padding(horizontal = 8.dp, vertical = if (isCompactHeight) 2.dp else 4.dp),
+      .background(bg, RoundedCornerShape(5.dp))
+      .border(border, RoundedCornerShape(5.dp))
+      .padding(horizontal = 6.dp, vertical = if (isCompactHeight) 1.dp else 2.5.dp),
     horizontalArrangement = Arrangement.SpaceBetween,
     verticalAlignment = Alignment.CenterVertically
   ) {
     Text(
       text = prayer.type.displayName,
-      fontSize = if (isCompactHeight) 10.5.sp else 12.sp,
+      fontSize = if (isCompactHeight) 10.sp else 11.5.sp,
       fontWeight = if (isUpcoming) FontWeight.ExtraBold else FontWeight.Medium,
       color = if (isUpcoming) Gold400 else IvoryWhite
     )
     Text(
       text = prayer.timeString,
-      fontSize = if (isCompactHeight) 11.5.sp else 13.5.sp,
+      fontSize = if (isCompactHeight) 11.sp else 13.sp,
       fontWeight = FontWeight.Bold,
       fontFamily = FontFamily.Monospace,
       color = if (isUpcoming) Gold400 else Emerald300
