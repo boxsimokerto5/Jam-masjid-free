@@ -593,6 +593,21 @@ private fun MosqueSubscriberItemCard(
         lineHeight = 15.sp
       )
 
+      if (mosque.dkmLeaderName.isNotBlank() || mosque.contactPhone.isNotBlank()) {
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+          if (mosque.dkmLeaderName.isNotBlank()) {
+            Text("👤 Pengurus: ${mosque.dkmLeaderName}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = IvoryWhite)
+          }
+          if (mosque.contactPhone.isNotBlank()) {
+            Text("📞 WA: ${mosque.contactPhone}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Gold400)
+          }
+        }
+      }
+
       Spacer(modifier = Modifier.height(4.dp))
 
       // Coordinates with Map Button

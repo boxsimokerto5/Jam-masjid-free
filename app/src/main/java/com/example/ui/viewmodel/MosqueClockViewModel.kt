@@ -61,6 +61,8 @@ data class MosqueUiState(
   val showMosqueAccountDialog: Boolean = false,
   val showPrivacyPolicyDialog: Boolean = false,
   val showReportIssueDialog: Boolean = false,
+  val showPostPaymentRegistrationDialog: Boolean = false,
+  val currentOrderId: String = "",
   val subscribersList: List<MosqueSubscriber> = emptyList(),
   val ticketsList: List<MosqueSupportTicket> = emptyList(),
   val isAdminLoading: Boolean = false,
@@ -597,10 +599,50 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
   }
 
   fun launchPlayStoreSubscription(activity: android.app.Activity) {
+    val simOrderId = "GPA.${System.currentTimeMillis()}"
     billingManager.launchSubscription(activity) {
       billingManager.setSubscriptionState(true)
       setSubscriptionDialogVisible(false)
-      setCastGuideDialogVisible(true)
+      _uiState.update {
+        it.copy(
+          currentOrderId = simOrderId,
+          showPostPaymentRegistrationDialog = true
+        )
+      }
+    }
+  }
+
+  fun setPostPaymentRegistrationDialogVisible(visible: Boolean) {
+    _uiState.update { it.copy(showPostPaymentRegistrationDialog = visible) }
+  }
+
+  fun completeMosqueRegistration(
+    mosqueName: String,
+    cityName: String,
+    mosqueAddress: String,
+    dkmLeader: String,
+    contactPhone: String,
+    contactEmail: String
+  ) {
+    updateMosqueName(mosqueName)
+    updateCityName(cityName)
+    repository.updateSettings { it.copy(mosqueAddress = mosqueAddress) }
+
+    viewModelScope.launch {
+      val orderId = _uiState.value.currentOrderId.ifBlank { "GPA.${System.currentTimeMillis()}" }
+      val updatedSettings = _uiState.value.settings.copy(
+        mosqueName = mosqueName,
+        cityName = cityName,
+        mosqueAddress = mosqueAddress
+      )
+      subscriberRepository.recordOrUpdateSubscription(
+        settings = updatedSettings,
+        orderId = orderId,
+        contactPhone = contactPhone,
+        contactEmail = contactEmail,
+        dkmLeaderName = dkmLeader
+      )
+      subscriberRepository.fetchAllSubscribers()
     }
   }
 

@@ -31,6 +31,7 @@ import com.example.ui.dialogs.CastGuideDialog
 import com.example.ui.dialogs.MosqueAccountDialog
 import com.example.ui.dialogs.MosqueAdminPanelDialog
 import com.example.ui.dialogs.MosqueSubscriptionDialog
+import com.example.ui.dialogs.PostPaymentRegistrationDialog
 import com.example.ui.dialogs.PrivacyPolicyDialog
 import com.example.ui.dialogs.ReportIssueDialog
 import com.example.ui.screens.MosqueMobilePortraitScreen
@@ -181,6 +182,9 @@ class MainActivity : ComponentActivity() {
                 onOpenReportIssue = {
                   viewModel.setReportIssueDialogVisible(true)
                 },
+                onOpenRegistrationDialog = {
+                  viewModel.setPostPaymentRegistrationDialogVisible(true)
+                },
                 modifier = Modifier.fillMaxSize()
               )
             }
@@ -221,8 +225,27 @@ class MainActivity : ComponentActivity() {
               onOpenReportIssue = {
                 viewModel.setReportIssueDialogVisible(true)
               },
+              onOpenRegistrationDialog = {
+                viewModel.setPostPaymentRegistrationDialogVisible(true)
+              },
               onDismiss = {
                 viewModel.setMosqueAccountDialogVisible(false)
+              }
+            )
+          }
+
+          // Formulir Registrasi Akun DKM & Konfirmasi Pembayaran Sukses
+          if (uiState.showPostPaymentRegistrationDialog) {
+            PostPaymentRegistrationDialog(
+              settings = uiState.settings,
+              orderId = uiState.currentOrderId,
+              deviceId = uiState.currentDeviceId,
+              deviceModel = uiState.currentDeviceModel,
+              onRegisterSubmit = { name, city, address, dkmLeader, phone, email ->
+                viewModel.completeMosqueRegistration(name, city, address, dkmLeader, phone, email)
+              },
+              onDismiss = {
+                viewModel.setPostPaymentRegistrationDialogVisible(false)
               }
             )
           }

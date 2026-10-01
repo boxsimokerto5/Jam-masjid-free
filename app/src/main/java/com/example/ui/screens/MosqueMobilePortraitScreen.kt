@@ -142,6 +142,7 @@ fun MosqueMobilePortraitScreen(
   onOpenAccountDialog: () -> Unit = {},
   onOpenPrivacyPolicy: () -> Unit = {},
   onOpenReportIssue: () -> Unit = {},
+  onOpenRegistrationDialog: () -> Unit = {},
   modifier: Modifier = Modifier
 ) {
   var selectedTab by remember { mutableIntStateOf(0) }
@@ -1685,6 +1686,17 @@ fun MosqueMobilePortraitScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                OutlinedButton(
+                  onClick = onOpenRegistrationDialog,
+                  modifier = Modifier.fillMaxWidth(),
+                  border = BorderStroke(1.dp, Gold400),
+                  colors = ButtonDefaults.outlinedButtonColors(contentColor = Gold400)
+                ) {
+                  Text("📝 Formulir Data Takmir & Lisensi Masjid", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Row(
                   modifier = Modifier.fillMaxWidth(),
                   horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1692,8 +1704,8 @@ fun MosqueMobilePortraitScreen(
                   OutlinedButton(
                     onClick = onOpenAccountDialog,
                     modifier = Modifier.weight(1f),
-                    border = BorderStroke(1.dp, Gold400),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Gold400)
+                    border = BorderStroke(1.dp, Emerald500),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Emerald300)
                   ) {
                     Icon(Icons.Default.VpnKey, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))

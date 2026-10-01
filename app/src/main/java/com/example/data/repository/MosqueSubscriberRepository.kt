@@ -95,7 +95,8 @@ class MosqueSubscriberRepository(private val context: Context) {
     settings: MosqueSettings,
     orderId: String = "",
     contactPhone: String = "",
-    contactEmail: String = ""
+    contactEmail: String = "",
+    dkmLeaderName: String = ""
   ): MosqueSubscriber = withContext(Dispatchers.IO) {
     val now = Calendar.getInstance()
     val dateFmt = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID"))
@@ -118,6 +119,7 @@ class MosqueSubscriberRepository(private val context: Context) {
       mosqueAddress = settings.mosqueAddress,
       latitude = settings.latitude,
       longitude = settings.longitude,
+      dkmLeaderName = dkmLeaderName,
       contactEmail = contactEmail.ifBlank { "dkm@${settings.cityName.lowercase().replace(" ", "")}.org" },
       contactPhone = contactPhone,
       activeDeviceId = deviceId,
@@ -162,6 +164,7 @@ class MosqueSubscriberRepository(private val context: Context) {
           "mosqueAddress" to subscriber.mosqueAddress,
           "latitude" to subscriber.latitude,
           "longitude" to subscriber.longitude,
+          "dkmLeaderName" to subscriber.dkmLeaderName,
           "contactEmail" to subscriber.contactEmail,
           "contactPhone" to subscriber.contactPhone,
           "activeDeviceId" to subscriber.activeDeviceId,
@@ -309,6 +312,7 @@ class MosqueSubscriberRepository(private val context: Context) {
           put("mosqueAddress", sub.mosqueAddress)
           put("latitude", sub.latitude)
           put("longitude", sub.longitude)
+          put("dkmLeaderName", sub.dkmLeaderName)
           put("contactEmail", sub.contactEmail)
           put("contactPhone", sub.contactPhone)
           put("activeDeviceId", sub.activeDeviceId)
@@ -365,6 +369,7 @@ class MosqueSubscriberRepository(private val context: Context) {
             mosqueAddress = obj.optString("mosqueAddress", ""),
             latitude = obj.optDouble("latitude", 0.0),
             longitude = obj.optDouble("longitude", 0.0),
+            dkmLeaderName = obj.optString("dkmLeaderName", ""),
             contactEmail = obj.optString("contactEmail", ""),
             contactPhone = obj.optString("contactPhone", ""),
             activeDeviceId = obj.optString("activeDeviceId", ""),

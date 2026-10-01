@@ -62,6 +62,7 @@ fun MosqueAccountDialog(
   onOpenSubscription: () -> Unit,
   onOpenPrivacyPolicy: () -> Unit = {},
   onOpenReportIssue: () -> Unit = {},
+  onOpenRegistrationDialog: () -> Unit = {},
   onDismiss: () -> Unit
 ) {
   Dialog(onDismissRequest = onDismiss) {
@@ -199,6 +200,21 @@ fun MosqueAccountDialog(
         }
 
         Spacer(modifier = Modifier.height(12.dp))
+
+        // Formulir Takmir DKM Button
+        OutlinedButton(
+          onClick = {
+            onDismiss()
+            onOpenRegistrationDialog()
+          },
+          modifier = Modifier.fillMaxWidth(),
+          border = BorderStroke(1.dp, Gold400),
+          shape = RoundedCornerShape(8.dp)
+        ) {
+          Text("📝 Formulir Data Takmir & Akun Masjid", fontSize = 11.sp, color = Gold400, fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Helpdesk & Privacy links
         Row(
