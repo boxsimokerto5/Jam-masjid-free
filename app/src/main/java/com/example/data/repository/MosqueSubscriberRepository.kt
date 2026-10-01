@@ -45,14 +45,14 @@ class MosqueSubscriberRepository(private val context: Context) {
 
   private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+  val deviceModel: String = "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL}"
+  val deviceId: String = getOrCreateDeviceId()
+
   private val _subscribersList = MutableStateFlow<List<MosqueSubscriber>>(loadLocalSubscribers())
   val subscribersList: StateFlow<List<MosqueSubscriber>> = _subscribersList.asStateFlow()
 
   private val _ticketsList = MutableStateFlow<List<MosqueSupportTicket>>(loadLocalTickets())
   val ticketsList: StateFlow<List<MosqueSupportTicket>> = _ticketsList.asStateFlow()
-
-  val deviceId: String by lazy { getOrCreateDeviceId() }
-  val deviceModel: String by lazy { "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL}" }
 
   @SuppressLint("HardwareIds")
   private fun getOrCreateDeviceId(): String {
