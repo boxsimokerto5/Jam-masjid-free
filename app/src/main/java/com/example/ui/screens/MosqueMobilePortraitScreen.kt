@@ -35,9 +35,12 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Mosque
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Notifications
@@ -48,6 +51,7 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.StayCurrentLandscape
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.ViewSidebar
 import androidx.compose.material.icons.filled.Widgets
@@ -69,6 +73,8 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -117,6 +123,8 @@ fun MosqueMobilePortraitScreen(
   onUpdateSettings: (MosqueSettings) -> Unit,
   onSelectCity: (CityPreset) -> Unit,
   onAutoDetectLocation: () -> Unit,
+  onToggleUseOnlineSchedule: (Boolean) -> Unit = {},
+  onSyncOnlineNow: () -> Unit = {},
   onSetBackgroundType: (String) -> Unit,
   onSetCustomBackgroundUri: (String) -> Unit,
   onSetOverlayDarkness: (Float) -> Unit,
@@ -671,13 +679,271 @@ fun MosqueMobilePortraitScreen(
         }
 
         1 -> {
-          // Tab 1: Jadwal & Lokasi Otomatis
+          // Tab 1: Jadwal Online Kemenag & Lokasi Otomatis
+          // 1. SINKRONISASI JADWAL ONLINE RESMI KEMENAG RI
           item {
             Card(
               modifier = Modifier.fillMaxWidth(),
-              colors = CardDefaults.cardColors(containerColor = Emerald900.copy(alpha = 0.85f)),
+              colors = CardDefaults.cardColors(containerColor = Emerald900.copy(alpha = 0.95f)),
+              shape = RoundedCornerShape(16.dp),
+              border = BorderStroke(1.5.dp, Gold400)
+            ) {
+              Column(modifier = Modifier.padding(16.dp)) {
+                // Header with Switch
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    Box(
+                      modifier = Modifier
+                        .size(42.dp)
+                        .background(Emerald800, CircleShape)
+                        .border(1.2.dp, Gold400, CircleShape),
+                      contentAlignment = Alignment.Center
+                    ) {
+                      Icon(
+                        imageVector = Icons.Default.Language,
+                        contentDescription = null,
+                        tint = Gold400,
+                        modifier = Modifier.size(22.dp)
+                      )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                      Text(
+                        text = "Ambil Jadwal dari Data Online",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Gold400
+                      )
+                      Text(
+                        text = "Resmi Kementerian Agama RI (Kemenag)",
+                        fontSize = 11.sp,
+                        color = IvoryWhite
+                      )
+                    }
+                  }
+
+                  Switch(
+                    checked = uiState.settings.useOnlineSchedule,
+                    onCheckedChange = { onToggleUseOnlineSchedule(it) },
+                    colors = SwitchDefaults.colors(
+                      checkedThumbColor = Gold400,
+                      checkedTrackColor = Emerald500,
+                      uncheckedThumbColor = SoftGray,
+                      uncheckedTrackColor = Obsidian800
+                    )
+                  )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Detail Box when online is enabled
+                if (uiState.settings.useOnlineSchedule) {
+                  Box(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                      .border(1.dp, Gold400.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                      .padding(12.dp)
+                  ) {
+                    Column {
+                      Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                      ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                          if (uiState.isSyncingOnline) {
+                            CircularProgressIndicator(
+                              modifier = Modifier.size(14.dp),
+                              color = Gold400,
+                              strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                              text = "Menghubungi server Kemenag...",
+                              fontSize = 11.sp,
+                              color = Gold400,
+                              fontWeight = FontWeight.Bold
+                            )
+                          } else {
+                            Icon(
+                              imageVector = Icons.Default.CheckCircle,
+                              contentDescription = null,
+                              tint = Emerald500,
+                              modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                              text = "Data Online Aktif (100% Otomatis)",
+                              fontSize = 12.sp,
+                              fontWeight = FontWeight.Bold,
+                              color = Emerald300
+                            )
+                          }
+                        }
+
+                        // Badge
+                        Box(
+                          modifier = Modifier
+                            .background(Gold500, RoundedCornerShape(4.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                          Text(
+                            text = "KEMENAG RI",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.Black
+                          )
+                        }
+                      }
+
+                      Spacer(modifier = Modifier.height(8.dp))
+
+                      Text(
+                        text = "Jam Subuh, Syuruq, Dzuhur, Ashar, Maghrib, dan Isya otomatis ditarik dari data online resmi Kemenag RI untuk wilayah ${uiState.settings.cityName}. Anda tidak perlu mencocokkan jam secara manual lagi!",
+                        fontSize = 11.sp,
+                        color = IvoryWhite,
+                        lineHeight = 16.sp
+                      )
+
+                      if (uiState.settings.lastOnlineSyncFormatted.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                          text = "🕒 Terakhir disinkronkan: ${uiState.settings.lastOnlineSyncFormatted}",
+                          fontSize = 10.sp,
+                          color = SoftGray
+                        )
+                      }
+
+                      if (uiState.onlineSyncMessage.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                          text = uiState.onlineSyncMessage,
+                          fontSize = 11.sp,
+                          color = Emerald300,
+                          fontWeight = FontWeight.Medium
+                        )
+                      }
+
+                      Spacer(modifier = Modifier.height(10.dp))
+
+                      // Preview Grid of 8 prayer times directly fetched from online Kemenag
+                      Text(
+                        text = "Jadwal Online Kemenag RI Hari Ini (${uiState.settings.cityName}):",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Gold400
+                      )
+                      Spacer(modifier = Modifier.height(6.dp))
+
+                      Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        val chunkedPrayers = uiState.prayerTimes.chunked(4)
+                        chunkedPrayers.forEach { rowPrayers ->
+                          Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                          ) {
+                            rowPrayers.forEach { prayer ->
+                              Box(
+                                modifier = Modifier
+                                  .weight(1f)
+                                  .background(Obsidian950, RoundedCornerShape(8.dp))
+                                  .border(1.dp, if (prayer.isUpcoming) Gold400 else Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                                  .padding(vertical = 6.dp, horizontal = 4.dp),
+                                contentAlignment = Alignment.Center
+                              ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                  Text(
+                                    text = prayer.type.displayName,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (prayer.isUpcoming) Gold400 else IvoryWhite
+                                  )
+                                  Text(
+                                    text = prayer.timeString,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = if (prayer.isUpcoming) Gold500 else Emerald300
+                                  )
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+
+                      Spacer(modifier = Modifier.height(10.dp))
+
+                      // Sync now button
+                      OutlinedButton(
+                        onClick = { onSyncOnlineNow() },
+                        enabled = !uiState.isSyncingOnline,
+                        modifier = Modifier.fillMaxWidth(),
+                        border = BorderStroke(1.dp, Gold400),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                          contentColor = Gold400
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                      ) {
+                        if (uiState.isSyncingOnline) {
+                          CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = Gold400,
+                            strokeWidth = 2.dp
+                          )
+                          Spacer(modifier = Modifier.width(8.dp))
+                          Text("Menyinkronkan...", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        } else {
+                          Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
+                          Spacer(modifier = Modifier.width(8.dp))
+                          Text("Sinkronkan Ulang Sekarang (Online)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                      }
+                    }
+                  }
+                } else {
+                  // Offline explanation
+                  Box(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .background(Obsidian800, RoundedCornerShape(10.dp))
+                      .padding(12.dp)
+                  ) {
+                    Column {
+                      Text(
+                        text = "Mode Manual / Hisab Lokal Aktif",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = IvoryWhite
+                      )
+                      Spacer(modifier = Modifier.height(4.dp))
+                      Text(
+                        text = "Jadwal saat ini dihitung secara offline dari rumus sudut posisi matahari. Aktifkan sakelar di atas agar jadwal otomatis mengambil dari server online Kemenag RI.",
+                        fontSize = 11.sp,
+                        color = SoftGray
+                      )
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          // Card 2: Lokasi & Area Aktif
+          item {
+            Card(
+              modifier = Modifier.fillMaxWidth(),
+              colors = CardDefaults.cardColors(containerColor = Obsidian800),
               shape = RoundedCornerShape(14.dp),
-              border = BorderStroke(1.5.dp, Gold400.copy(alpha = 0.7f))
+              border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f))
             ) {
               Column(modifier = Modifier.padding(14.dp)) {
                 Row(
@@ -696,8 +962,8 @@ fun MosqueMobilePortraitScreen(
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
-                      Text("Jadwal Sholat Otomatis per Area", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Gold400)
-                      Text("Akurasi hisab Kemenag sesuai GPS/Jaringan", fontSize = 11.sp, color = IvoryWhite)
+                      Text("Area & Titik Koordinat Masjid", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = IvoryWhite)
+                      Text("Menentukan titik rujukan data jadwal online Kemenag", fontSize = 11.sp, color = SoftGray)
                     }
                   }
                 }
@@ -761,11 +1027,11 @@ fun MosqueMobilePortraitScreen(
                   if (uiState.isDetectingLocation) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.Black, strokeWidth = 2.dp)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Mendeteksi Koordinat Area...", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text("Mendeteksi Lokasi & Menarik Jadwal Online...", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                   } else {
                     Icon(Icons.Default.MyLocation, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Deteksi Lokasi Saya Sekarang (Otomatis)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text("Deteksi Lokasi Saya & Tarik Jadwal Online", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                   }
                 }
               }
@@ -836,14 +1102,44 @@ fun MosqueMobilePortraitScreen(
           item {
             Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Obsidian800), shape = RoundedCornerShape(12.dp)) {
               Column(modifier = Modifier.padding(12.dp)) {
-                Text("Koreksi Menit Sholat (Ihtiyat)", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = IvoryWhite)
-                Text("Penyesuaian toleransi menit lokal jika ada selisih kalender", fontSize = 11.sp, color = SoftGray)
+                Text("Koreksi Menit Sholat (Ihtiyat Manual - Opsional)", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = IvoryWhite)
+                Text(
+                  text = if (uiState.settings.useOnlineSchedule) {
+                    "💡 Jadwal online Kemenag sudah tepat otomatis. Koreksi ini opsional (disarankan 0 atau +2 menit aman)."
+                  } else {
+                    "Penyesuaian toleransi menit lokal jika ada selisih kalender cetak"
+                  },
+                  fontSize = 11.sp,
+                  color = if (uiState.settings.useOnlineSchedule) Emerald300 else SoftGray
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 IhtiyatRow("Subuh", uiState.settings.correctionSubuh) { d -> onUpdateSettings(uiState.settings.copy(correctionSubuh = (uiState.settings.correctionSubuh + d).coerceIn(-10, 10))) }
                 IhtiyatRow("Dzuhur", uiState.settings.correctionDzuhur) { d -> onUpdateSettings(uiState.settings.copy(correctionDzuhur = (uiState.settings.correctionDzuhur + d).coerceIn(-10, 10))) }
                 IhtiyatRow("Ashar", uiState.settings.correctionAshar) { d -> onUpdateSettings(uiState.settings.copy(correctionAshar = (uiState.settings.correctionAshar + d).coerceIn(-10, 10))) }
                 IhtiyatRow("Maghrib", uiState.settings.correctionMaghrib) { d -> onUpdateSettings(uiState.settings.copy(correctionMaghrib = (uiState.settings.correctionMaghrib + d).coerceIn(-10, 10))) }
                 IhtiyatRow("Isya", uiState.settings.correctionIsya) { d -> onUpdateSettings(uiState.settings.copy(correctionIsya = (uiState.settings.correctionIsya + d).coerceIn(-10, 10))) }
+
+                if (uiState.settings.useOnlineSchedule && (uiState.settings.correctionSubuh != 0 || uiState.settings.correctionDzuhur != 0 || uiState.settings.correctionAshar != 0 || uiState.settings.correctionMaghrib != 0 || uiState.settings.correctionIsya != 0)) {
+                  Spacer(modifier = Modifier.height(8.dp))
+                  OutlinedButton(
+                    onClick = {
+                      onUpdateSettings(
+                        uiState.settings.copy(
+                          correctionSubuh = 0,
+                          correctionDzuhur = 0,
+                          correctionAshar = 0,
+                          correctionMaghrib = 0,
+                          correctionIsya = 0,
+                          correctionImsak = 0
+                        )
+                      )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    border = BorderStroke(1.dp, Gold400.copy(alpha = 0.5f))
+                  ) {
+                    Text("Setel Semua Koreksi ke 0 (Sesuai Online Murni)", fontSize = 11.sp, color = Gold400)
+                  }
+                }
               }
             }
           }

@@ -132,6 +132,12 @@ class MainActivity : ComponentActivity() {
                 onAutoDetectLocation = {
                   viewModel.autoDetectLocation()
                 },
+                onToggleUseOnlineSchedule = { enabled ->
+                  viewModel.toggleUseOnlineSchedule(enabled)
+                },
+                onSyncOnlineNow = {
+                  viewModel.syncOnlinePrayerTimes(force = true)
+                },
                 onSetBackgroundType = { bgType ->
                   viewModel.setBackgroundType(bgType)
                 },

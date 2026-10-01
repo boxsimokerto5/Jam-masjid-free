@@ -24,7 +24,10 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Locale
 import com.example.data.billing.MosqueBillingManager
+import com.example.data.prayer.OnlinePrayerService
 import com.example.server.MosqueLocalPwaServer
+import org.json.JSONObject
+import java.text.SimpleDateFormat
 
 data class MosqueUiState(
   val settings: MosqueSettings = MosqueSettings(),
@@ -47,7 +50,10 @@ data class MosqueUiState(
   val isDetectingLocation: Boolean = false,
   val locationDetectionMessage: String = "",
   val isPwaServerRunning: Boolean = false,
-  val pwaServerUrl: String = ""
+  val pwaServerUrl: String = "",
+  val isSyncingOnline: Boolean = false,
+  val onlineSyncMessage: String = "",
+  val isOnlineDataActive: Boolean = false
 )
 
 class MosqueClockViewModel(application: Application) : AndroidViewModel(application) {
@@ -96,14 +102,36 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
     pwaServer.updateSettings(repository.settingsFlow.value)
     pwaServer.startServer()
 
+    // Otomatis sinkronisasi jadwal sholat dari server online Kemenag RI
+    viewModelScope.launch {
+      delay(600)
+      val current = _uiState.value.settings
+      if (current.useOnlineSchedule) {
+        val todayKey = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Calendar.getInstance().time)
+        val needsSync = current.cachedOnlineDate != todayKey || current.cachedOnlineTimesJson.isBlank()
+        syncOnlinePrayerTimes(force = needsSync)
+      }
+    }
+
     // Main clock ticker loop (ticks every 1 second)
     viewModelScope.launch {
       var slideCounter = 0
+      var lastCheckedDayOfYear = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
+
       while (isActive) {
         val now = Calendar.getInstance()
         val h = now.get(Calendar.HOUR_OF_DAY)
         val m = now.get(Calendar.MINUTE)
         val s = now.get(Calendar.SECOND)
+
+        // Otomatis sinkronisasi saat pergantian hari / tengah malam (00:00:00)
+        val currentDayOfYear = now.get(Calendar.DAY_OF_YEAR)
+        if (currentDayOfYear != lastCheckedDayOfYear) {
+          lastCheckedDayOfYear = currentDayOfYear
+          if (_uiState.value.settings.useOnlineSchedule) {
+            syncOnlinePrayerTimes(force = true)
+          }
+        }
 
         val timeStr = String.format(Locale.US, "%02d:%02d", h, m)
         val secStr = String.format(Locale.US, "%02d", s)
@@ -136,8 +164,9 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
     val now = Calendar.getInstance()
     val prayers = PrayerCalculator.calculatePrayerTimes(now, _uiState.value.settings)
     val next = prayers.firstOrNull { it.isUpcoming } ?: prayers.firstOrNull()
+    val isOnline = _uiState.value.settings.useOnlineSchedule && _uiState.value.settings.cachedOnlineTimesJson.isNotBlank()
 
-    _uiState.update { it.copy(prayerTimes = prayers, nextPrayer = next) }
+    _uiState.update { it.copy(prayerTimes = prayers, nextPrayer = next, isOnlineDataActive = isOnline) }
   }
 
   private fun handleStateTransitions(now: Calendar, timeStr: String, currentSec: Int) {
@@ -233,11 +262,14 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
       timeRemainingStr = String.format(Locale.US, "%02d:%02d:%02d", hours, mins, secs)
     }
 
+    val isOnline = _uiState.value.settings.useOnlineSchedule && _uiState.value.settings.cachedOnlineTimesJson.isNotBlank()
+
     _uiState.update {
       it.copy(
         prayerTimes = prayers,
         nextPrayer = next,
-        timeUntilNextPrayer = timeRemainingStr
+        timeUntilNextPrayer = timeRemainingStr,
+        isOnlineDataActive = isOnline
       )
     }
   }
@@ -311,6 +343,82 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
       timezoneOffset = city.timezoneOffsetHours
     )
     updateSettings(updated)
+    if (updated.useOnlineSchedule) {
+      syncOnlinePrayerTimes(force = true)
+    }
+  }
+
+  fun toggleUseOnlineSchedule(enabled: Boolean) {
+    val current = _uiState.value.settings
+    val updated = current.copy(useOnlineSchedule = enabled)
+    updateSettings(updated)
+    if (enabled) {
+      syncOnlinePrayerTimes(force = true)
+    }
+  }
+
+  fun syncOnlinePrayerTimes(force: Boolean = false, onFinished: ((Boolean, String) -> Unit)? = null) {
+    val current = _uiState.value.settings
+    if (!current.useOnlineSchedule && !force) return
+    if (_uiState.value.isSyncingOnline) return
+
+    viewModelScope.launch {
+      _uiState.update { it.copy(isSyncingOnline = true, onlineSyncMessage = "Menghubungi server Kemenag RI...") }
+      try {
+        val now = Calendar.getInstance()
+        val result = OnlinePrayerService.fetchPrayerTimes(
+          latitude = current.latitude,
+          longitude = current.longitude,
+          calendar = now
+        )
+
+        if (result.isSuccess && result.timings.isNotEmpty()) {
+          val json = JSONObject()
+          result.timings.forEach { (type, timeStr) ->
+            json.put(type.name, timeStr)
+          }
+
+          val timeFmt = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID")).format(now.time)
+          val syncFmt = "$timeFmt WIB"
+
+          val updated = _uiState.value.settings.copy(
+            useOnlineSchedule = true,
+            cachedOnlineTimesJson = json.toString(),
+            cachedOnlineDate = result.dateKey,
+            lastOnlineSyncFormatted = syncFmt,
+            onlineSource = "Kemenag RI (${result.sourceName})"
+          )
+          updateSettings(updated)
+          _uiState.update {
+            it.copy(
+              isSyncingOnline = false,
+              isOnlineDataActive = true,
+              onlineSyncMessage = "✅ Jadwal online resmi Kemenag RI (${current.cityName}) berhasil disinkronkan otomatis ($syncFmt). Tidak perlu mencocokkan jam secara manual."
+            )
+          }
+          onFinished?.invoke(true, syncFmt)
+        } else {
+          val err = result.errorMessage ?: "Koneksi ke server gagal"
+          val hasCache = current.cachedOnlineTimesJson.isNotBlank()
+          _uiState.update {
+            it.copy(
+              isSyncingOnline = false,
+              isOnlineDataActive = hasCache,
+              onlineSyncMessage = if (hasCache) "Menggunakan cache online (${current.lastOnlineSyncFormatted})" else "Gagal sinkronisasi online ($err). Menggunakan hisab astronomi lokal."
+            )
+          }
+          onFinished?.invoke(false, err)
+        }
+      } catch (e: Exception) {
+        _uiState.update {
+          it.copy(
+            isSyncingOnline = false,
+            onlineSyncMessage = "Kendala koneksi: ${e.message}"
+          )
+        }
+        onFinished?.invoke(false, e.message ?: "Error")
+      }
+    }
   }
 
   fun autoDetectLocation(onFinished: ((Boolean, String) -> Unit)? = null) {
@@ -327,6 +435,9 @@ class MosqueClockViewModel(application: Application) : AndroidViewModel(applicat
           timezoneOffset = result.timezoneOffset
         )
         updateSettings(updated)
+        if (updated.useOnlineSchedule) {
+          syncOnlinePrayerTimes(force = true)
+        }
         val msg = if (result.isGpsSuccess) {
           "Lokasi otomatis aktif: ${result.address} (${String.format(Locale.US, "%.4f, %.4f", result.latitude, result.longitude)})"
         } else {

@@ -8,6 +8,11 @@ data class MosqueSettings(
   val longitude: Double = 112.0178,
   val timezoneOffset: Double = 7.0,
   val hijriAdjustmentDays: Int = 0,
+  val useOnlineSchedule: Boolean = true, // Mengambil jadwal langsung dari data online resmi Kemenag RI
+  val onlineSource: String = "Kemenag RI (Aladhan API)",
+  val lastOnlineSyncFormatted: String = "",
+  val cachedOnlineTimesJson: String = "",
+  val cachedOnlineDate: String = "", // Format: yyyy-MM-dd
   val backgroundType: String = "preset_twilight", // preset_twilight, preset_emerald, gradient_emerald, gradient_midnight, gradient_sunset, custom_uri
   val customBackgroundUri: String = "",
   val overlayDarkness: Float = 0.50f, // 0.2f to 0.85f
@@ -62,5 +67,29 @@ data class MosqueSettings(
       PrayerType.ISYA -> correctionIsya
       else -> 2
     }
+  }
+
+  fun getOnlineTimingFor(type: PrayerType): String? {
+    if (cachedOnlineTimesJson.isBlank()) return null
+    return try {
+      val json = org.json.JSONObject(cachedOnlineTimesJson)
+      if (json.has(type.name)) json.getString(type.name) else null
+    } catch (_: Exception) {
+      null
+    }
+  }
+
+  fun getOnlineTimingsMap(): Map<PrayerType, String> {
+    if (cachedOnlineTimesJson.isBlank()) return emptyMap()
+    val map = mutableMapOf<PrayerType, String>()
+    try {
+      val json = org.json.JSONObject(cachedOnlineTimesJson)
+      PrayerType.values().forEach { type ->
+        if (json.has(type.name)) {
+          map[type] = json.getString(type.name)
+        }
+      }
+    } catch (_: Exception) {}
+    return map
   }
 }

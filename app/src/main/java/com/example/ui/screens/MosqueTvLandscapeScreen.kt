@@ -144,6 +144,22 @@ fun MosqueTvLandscapeScreen(
                     Text("TV MIRRORING", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = Emerald300)
                   }
                 }
+
+                if (uiState.isOnlineDataActive) {
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Box(
+                    modifier = Modifier
+                      .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
+                      .border(0.8.dp, Gold400, RoundedCornerShape(4.dp))
+                      .padding(horizontal = 7.dp, vertical = 2.dp)
+                  ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                      Box(modifier = Modifier.size(7.dp).background(Emerald500, CircleShape))
+                      Spacer(modifier = Modifier.width(5.dp))
+                      Text("ONLINE KEMENAG RI (OTOMATIS)", fontSize = 8.5.sp, fontWeight = FontWeight.ExtraBold, color = Gold400)
+                    }
+                  }
+                }
               }
             }
           }

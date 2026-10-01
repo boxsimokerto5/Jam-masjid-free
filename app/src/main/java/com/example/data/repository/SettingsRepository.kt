@@ -37,6 +37,11 @@ class SettingsRepository(context: Context) {
       longitude = java.lang.Double.longBitsToDouble(prefs.getLong("longitude", java.lang.Double.doubleToLongBits(112.0178))),
       timezoneOffset = java.lang.Double.longBitsToDouble(prefs.getLong("tz_offset", java.lang.Double.doubleToLongBits(7.0))),
       hijriAdjustmentDays = prefs.getInt("hijri_adj", 0),
+      useOnlineSchedule = prefs.getBoolean("use_online_sched", true),
+      onlineSource = prefs.getString("online_source", "Kemenag RI (Aladhan API)") ?: "Kemenag RI (Aladhan API)",
+      lastOnlineSyncFormatted = prefs.getString("last_online_sync_fmt", "") ?: "",
+      cachedOnlineTimesJson = prefs.getString("cached_online_times_json", "") ?: "",
+      cachedOnlineDate = prefs.getString("cached_online_date", "") ?: "",
       backgroundType = prefs.getString("bg_type", "preset_twilight") ?: "preset_twilight",
       customBackgroundUri = prefs.getString("custom_bg_uri", "") ?: "",
       overlayDarkness = prefs.getFloat("overlay_darkness", 0.50f),
@@ -73,6 +78,11 @@ class SettingsRepository(context: Context) {
       putLong("longitude", java.lang.Double.doubleToLongBits(newSettings.longitude))
       putLong("tz_offset", java.lang.Double.doubleToLongBits(newSettings.timezoneOffset))
       putInt("hijri_adj", newSettings.hijriAdjustmentDays)
+      putBoolean("use_online_sched", newSettings.useOnlineSchedule)
+      putString("online_source", newSettings.onlineSource)
+      putString("last_online_sync_fmt", newSettings.lastOnlineSyncFormatted)
+      putString("cached_online_times_json", newSettings.cachedOnlineTimesJson)
+      putString("cached_online_date", newSettings.cachedOnlineDate)
       putString("bg_type", newSettings.backgroundType)
       putString("custom_bg_uri", newSettings.customBackgroundUri)
       putFloat("overlay_darkness", newSettings.overlayDarkness)

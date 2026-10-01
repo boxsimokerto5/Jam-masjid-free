@@ -130,16 +130,50 @@ object PrayerCalculator {
       return String.format(Locale.US, "%02d:%02d", h, m)
     }
 
-    val items = listOf(
-      PrayerTimeItem(PrayerType.IMSAK, formatMin(imsakMin), imsakMin / 60, imsakMin % 60),
-      PrayerTimeItem(PrayerType.SUBUH, formatMin(subuhMin), subuhMin / 60, subuhMin % 60),
-      PrayerTimeItem(PrayerType.TERBIT, formatMin(syuruqMin), syuruqMin / 60, syuruqMin % 60),
-      PrayerTimeItem(PrayerType.DHUHA, formatMin(dhuhaMin), dhuhaMin / 60, dhuhaMin % 60),
-      PrayerTimeItem(PrayerType.DZUHUR, formatMin(dzuhurMin), dzuhurMin / 60, dzuhurMin % 60),
-      PrayerTimeItem(PrayerType.ASHAR, formatMin(asharMin), asharMin / 60, asharMin % 60),
-      PrayerTimeItem(PrayerType.MAGHRIB, formatMin(maghribMin), maghribMin / 60, maghribMin % 60),
-      PrayerTimeItem(PrayerType.ISYA, formatMin(isyaMin), isyaMin / 60, isyaMin % 60)
+    val fallbackCalculatedMap = mapOf(
+      PrayerType.IMSAK to formatMin(imsakMin),
+      PrayerType.SUBUH to formatMin(subuhMin),
+      PrayerType.TERBIT to formatMin(syuruqMin),
+      PrayerType.DHUHA to formatMin(dhuhaMin),
+      PrayerType.DZUHUR to formatMin(dzuhurMin),
+      PrayerType.ASHAR to formatMin(asharMin),
+      PrayerType.MAGHRIB to formatMin(maghribMin),
+      PrayerType.ISYA to formatMin(isyaMin)
     )
+
+    // Check if online schedule is enabled and cached timings exist
+    val onlineTimings = if (settings.useOnlineSchedule) settings.getOnlineTimingsMap() else emptyMap()
+    val isUsingOnline = settings.useOnlineSchedule && onlineTimings.isNotEmpty()
+
+    val prayerTypes = listOf(
+      PrayerType.IMSAK,
+      PrayerType.SUBUH,
+      PrayerType.TERBIT,
+      PrayerType.DHUHA,
+      PrayerType.DZUHUR,
+      PrayerType.ASHAR,
+      PrayerType.MAGHRIB,
+      PrayerType.ISYA
+    )
+
+    val items = prayerTypes.map { type ->
+      val timeStr = if (isUsingOnline && onlineTimings.containsKey(type)) {
+        onlineTimings[type]!!
+      } else {
+        fallbackCalculatedMap[type] ?: "00:00"
+      }
+
+      val parts = timeStr.split(":")
+      val hour = parts.getOrNull(0)?.toIntOrNull() ?: 0
+      val minute = parts.getOrNull(1)?.toIntOrNull() ?: 0
+
+      PrayerTimeItem(
+        type = type,
+        timeString = String.format(Locale.US, "%02d:%02d", hour, minute),
+        hour = hour,
+        minute = minute
+      )
+    }
 
     // Determine current/upcoming
     val currentMinuteOfDay = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)

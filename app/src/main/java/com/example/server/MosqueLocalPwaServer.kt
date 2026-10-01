@@ -179,6 +179,9 @@ class MosqueLocalPwaServer(private val context: Context) {
       put("correctionAshar", settings.correctionAshar)
       put("correctionMaghrib", settings.correctionMaghrib)
       put("correctionIsya", settings.correctionIsya)
+      put("useOnlineSchedule", settings.useOnlineSchedule)
+      put("lastOnlineSyncFormatted", settings.lastOnlineSyncFormatted)
+      put("cachedOnlineTimesJson", settings.cachedOnlineTimesJson)
       put("runningTexts", JSONArray(settings.runningTexts))
       put("runningTextSpeed", settings.runningTextSpeed)
     }
@@ -662,15 +665,32 @@ class MosqueLocalPwaServer(private val context: Context) {
         return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
       }
 
+      let onlineMap = null;
+      if (localData.useOnlineSchedule && localData.cachedOnlineTimesJson) {
+        try {
+          onlineMap = typeof localData.cachedOnlineTimesJson === 'string' ? JSON.parse(localData.cachedOnlineTimesJson) : localData.cachedOnlineTimesJson;
+        } catch(e) {}
+      }
+
+      function getPrayerTime(idx, key, calculatedDec) {
+        if (onlineMap && onlineMap[key]) {
+          const t = onlineMap[key];
+          const parts = t.split(':');
+          const dec = parseInt(parts[0]) + parseInt(parts[1])/60;
+          return { ...PRAYER_NAMES[idx], time: t, dec: dec, isOnline: true };
+        }
+        return { ...PRAYER_NAMES[idx], time: toHM(calculatedDec), dec: calculatedDec, isOnline: false };
+      }
+
       return [
-        { ...PRAYER_NAMES[0], time: toHM(dImsak), dec: dImsak },
-        { ...PRAYER_NAMES[1], time: toHM(dSubuh), dec: dSubuh },
-        { ...PRAYER_NAMES[2], time: toHM(dTerbit), dec: dTerbit },
-        { ...PRAYER_NAMES[3], time: toHM(dDhuha), dec: dDhuha },
-        { ...PRAYER_NAMES[4], time: toHM(dDzuhur), dec: dDzuhur },
-        { ...PRAYER_NAMES[5], time: toHM(dAshar), dec: dAshar },
-        { ...PRAYER_NAMES[6], time: toHM(dMaghrib), dec: dMaghrib },
-        { ...PRAYER_NAMES[7], time: toHM(dIsya), dec: dIsya }
+        getPrayerTime(0, 'IMSAK', dImsak),
+        getPrayerTime(1, 'SUBUH', dSubuh),
+        getPrayerTime(2, 'TERBIT', dTerbit),
+        getPrayerTime(3, 'DHUHA', dDhuha),
+        getPrayerTime(4, 'DZUHUR', dDzuhur),
+        getPrayerTime(5, 'ASHAR', dAshar),
+        getPrayerTime(6, 'MAGHRIB', dMaghrib),
+        getPrayerTime(7, 'ISYA', dIsya)
       ];
     }
 
